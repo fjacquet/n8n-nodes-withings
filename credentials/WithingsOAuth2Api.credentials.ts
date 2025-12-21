@@ -73,14 +73,14 @@ export class WithingsOAuth2Api implements ICredentialType {
     },
   ];
 
-  // Override tokenDataPostReceiveProcess to add Withings-specific parameters
+  // Override oauthTokenData to add Withings-specific parameters
   // Withings requires 'action=requesttoken' parameter in token requests
-  tokenDataPostReceiveProcess = {
+  oauthTokenData = {
     // Include credentials in the refresh request body
     includeCredentialsOnRefreshOnBody: true,
 
-    // Pre-send modifications for token requests with signature and nonce
-    preSend: async (requestOptions: IHttpRequestOptions, credentials: IDataObject) => {
+    // Pre-authentication hook - called before making token request
+    preAuthentication: async (requestOptions: IHttpRequestOptions, credentials: IDataObject) => {
       console.log('=== WITHINGS DEBUG: preSend called ===');
       console.log('Request URL:', requestOptions.url);
       console.log('Credentials keys:', Object.keys(credentials));
