@@ -1,10 +1,9 @@
 # n8n-nodes-withings
 
-This is an n8n community node for integrating with the [Withings](https://www.withings.com/) API. It allows you to connect to your Withings account and access health and fitness data through OAuth2 authentication.
+This is an n8n community node for integrating with the [Withings](https://www.withings.com/) API. It provides nodes to access health and fitness data from your Withings account.
 
 ## Features
 
-- OAuth2 authentication with Withings API
 - Complete integration with Withings API resources:
   - Activity data (getactivity, getsummary, getworkouts)
   - Measurements (getmeas, getactivity, getintradayactivity)
@@ -12,174 +11,160 @@ This is an n8n community node for integrating with the [Withings](https://www.wi
   - User information (getdevice, getgoals, get)
 - Customizable parameters for all API operations
 - Proper error handling and response formatting
+- Automatic token refresh
 
 ## Prerequisites
 
-- [n8n](https://n8n.io/) (version 1.0.0 or later, tested with 1.104.2)
+- [n8n](https://n8n.io/) (version 1.0.0 or later)
 - Withings developer account and API credentials
+- **[n8n-nodes-withings-oauth2-credential](https://github.com/schimmmi/n8n-nodes-withings-oauth2-credential)** package (required for OAuth2 authentication)
 
 ## Installation
 
-Follow these instructions to install this node in your n8n instance:
+**IMPORTANT:** This package requires the separate credential package to handle Withings' non-standard OAuth2 implementation.
+
+Install both packages:
 
 ```bash
+# 1. Install the OAuth2 credential package first
+npm install n8n-nodes-withings-oauth2-credential
+
+# 2. Then install this node package
 npm install n8n-nodes-withings
 ```
 
-For Docker-based n8n installations, you can use the [n8n-docker-custom](https://github.com/n8n-io/n8n-docker-custom) approach.
+For Docker-based n8n installations:
+
+```bash
+# Add both packages to your docker-compose.yml or Dockerfile
+npm install n8n-nodes-withings-oauth2-credential n8n-nodes-withings
+```
+
+Or use the [n8n-docker-custom](https://github.com/n8n-io/n8n-docker-custom) approach.
 
 ## Configuration
 
 1. Create a developer account at [Withings Developer](https://developer.withings.com/)
 2. Register a new application to get your Client ID and Client Secret
 3. Set the callback URL to: `https://your-n8n-domain.com/rest/oauth2-credential/callback`
-4. In n8n, create a new credential of type "Withings OAuth2 API"
+4. In n8n, create a new credential of type "Withings OAuth2 API" (provided by the credential package)
 5. Enter your Client ID and Client Secret
 6. Configure the scopes as needed (default: user.info,user.metrics,user.activity,user.sleepevents)
-7. Complete the OAuth2 flow by connecting to your Withings account
+7. Click "Connect my account" and complete the OAuth2 flow
 
-### Withings OAuth2 Specifics
+### Why Two Packages?
 
-The Withings API has some special requirements for OAuth2 authentication:
-
-- The token request requires an additional `action=requesttoken` parameter
-- Authentication for API requests uses Bearer token in the Authorization header
-- Token exchange requires specific formatting of the request body
-- **Access tokens expire after 3600 seconds (1 hour)** and are automatically refreshed by n8n
-- **Signature generation and nonce retrieval** are required for enhanced security
-
-This node handles these requirements automatically through a custom authentication implementation. The token refresh is managed automatically with the following mechanisms:
-
-1. **Enhanced Security with Signatures**: The implementation uses HMAC-SHA256 signatures and nonces for secure authentication:
-   - Retrieves a nonce from the Withings API before token requests
-   - Generates cryptographic signatures for authentication requests
-   - Properly formats request parameters according to Withings requirements
-   - Handles scope formatting with proper "user." prefixes
-   - Gracefully falls back to standard authentication if signature generation fails
-
-2. **Automatic Token Refresh**: Tokens are automatically refreshed by n8n before expiration
-   - Explicitly specifies refresh_token in the grant type
-   - Includes the refresh token in token refresh requests
-   - Ensures proper token synchronization between requests
-   - Specifies the refresh token key name for precise handling
-   - Includes scopes during refresh for complete token state
-
-3. **Extreme Token Validation**: Multiple validation strategies are employed before each API request:
-   - Pre-request validation with up to 7 attempts using different endpoints (increased from 5)
-   - Multiple direct token refresh attempts with 5 different fallback strategies (increased from 3)
-   - Token state tracking to ensure validity throughout the request lifecycle
-   - Cache-busting timestamps with enhanced randomization to prevent stale token issues
-   - Comprehensive cache prevention headers with Expires and Pragma directives
-   - Unique request IDs for better tracking and cache prevention
-
-4. **Advanced Retry Logic**: If a token error occurs, the node uses an intelligent retry mechanism with:
-   - Enhanced error detection for 25+ token-related error patterns (increased from 20+)
-   - Exponential backoff with improved jitter for more effective retries
-   - Multiple refresh attempts with increasing delays and randomization
-   - Structured approach with 5 different endpoint strategies
-   - Fresh request options for each attempt to prevent reference issues
-   - Request timeouts to prevent hanging connections
-   - Graceful failure with detailed error messages after multiple attempts
-
-These mechanisms work together to ensure reliable API communication even with Withings' short-lived tokens. The implementation is designed to be extremely resilient to token expiration issues, network fluctuations, and API inconsistencies.
+Withings uses a non-standard OAuth2 implementation that requires an additional `action=requesttoken` parameter in the token request body. N8n's standard OAuth2 doesn't support modifying the token request body, so we need a separate credential package that uses `genericOAuth2Api` with a custom `authenticate()` method to inject this parameter.
 
 ## Usage
 
-The Withings API node provides access to various health and fitness data from your Withings account. Here's how to use it:
+Once installed and configured, you can use the Withings API node in your workflows:
 
-1. Add the Withings API node to your workflow
-2. Select the Withings OAuth2 API credentials (create them if you haven't already)
-3. Choose a resource (Activity, Measure, Sleep, or User)
-4. Select an operation for the chosen resource
-5. Configure any additional parameters as needed
+1. Add a "Withings API" node to your workflow
+2. Select your Withings OAuth2 credential
+3. Choose the resource (Activity, Measure, Sleep, or User)
+4. Choose the operation (e.g., "Get" for sleep data)
+5. Configure any additional parameters (date ranges, data fields, etc.)
 
-### Available Resources and Operations
+## Example Workflows
 
-#### Activity Resource
-- **Get Activity**: Retrieves user activity data
-- **Get Summary**: Gets a summary of user activity
-- **Get Workouts**: Retrieves workout data
+### Get Sleep Data
 
-#### Measure Resource
-- **Get Measurements**: Retrieves body measurements (weight, height, etc.)
-- **Get Activity**: Gets activity measurements
-- **Get Intradayactivity**: Retrieves detailed intraday activity data
+```
+Manual Trigger → Withings API (Sleep / Get) → Process Data
+```
 
-#### Sleep Resource
-- **Get**: Retrieves sleep data
-- **Get Summary**: Gets a summary of sleep data
+Configure the node:
+- Resource: Sleep
+- Operation: Get
+- Additional Fields:
+  - Start Date: 2025-01-01
+  - End Date: 2025-01-31
+  - Data Fields: hr, rr, snoring
 
-#### User Resource
-- **Get Device**: Retrieves information about user devices
-- **Get Goals**: Gets user goals
-- **Get**: Retrieves user information
+### Get Daily Activity Summary
 
-### Common Parameters
+```
+Schedule Trigger → Withings API (Activity / Get Summary) → Store in Database
+```
 
-Most operations support the following parameters:
-- **Start Date**: The start date for data retrieval
-- **End Date**: The end date for data retrieval
-- **Last Update**: Get only data updated after this date
-- **Offset**: Skip this many records
+## API Resources
 
-### Measure-Specific Parameters
-- **Measure Type**: Select the types of measurements to retrieve (weight, height, blood pressure, etc.)
+### Activity
+- **Get Activity**: Retrieve user activity data
+- **Get Summary**: Get activity summary
+- **Get Workouts**: Fetch workout data
 
-### Sleep-Specific Parameters
-- **Data Fields**: Select the types of sleep data to retrieve (heart rate, respiration rate, snoring)
+### Measure
+- **Get Measurements**: Get measurement data (weight, height, blood pressure, etc.)
+- **Get Activity**: Get user intraday activity
+- **Get Intradayactivity**: Get detailed intraday activity
 
-## Resources
+### Sleep
+- **Get**: Get sleep data (with optional HR, RR, snoring data)
+- **Get Summary**: Get sleep summary
 
-- [Withings API Documentation](https://developer.withings.com/api-reference)
-- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/)
+### User
+- **Get Device**: Get user devices
+- **Get Goals**: Get user goals
+- **Get**: Get user information
+
+## Troubleshooting
+
+### "Unable to sign without access token" Error
+
+This usually means the OAuth2 flow didn't complete successfully. Try:
+1. Make sure you installed **both** packages (credential + node)
+2. Delete and recreate your Withings OAuth2 credential
+3. Click "Connect my account" again
+4. Check the n8n logs for detailed error messages
+
+### Token Expired
+
+Tokens automatically refresh. If you see token errors:
+1. Reconnect your account in the credentials settings
+2. Check that your Withings app credentials are still valid
+
+## Development
+
+```bash
+# Clone the repository
+git clone https://github.com/schimmmi/n8n-nodes-withings.git
+
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Watch mode for development
+npm run dev
+```
 
 ## Version History
 
-- 0.7.7: **CRITICAL FIX**: Explicitly configure token response parsing with accessTokenKey and expiresInKey
-- 0.7.6: **CRITICAL FIX**: Fix OAuth2 Token URL - remove query parameter and use clean URL as per Withings documentation
-- 0.7.5: Restore authenticate section that was accidentally removed - required for OAuth2 to work
-- 0.7.4: **CRITICAL FIX**: Fix OAuth2 token path - use correct oauthTokenData.access_token instead of accessToken
-- 0.7.3: **CRITICAL FIX**: Correct token expiration time from 30 seconds to 3600 seconds (1 hour) - major improvement in stability
-- 0.7.2: Optimize token timing for sleep endpoints - reduce validation delays
-- 0.7.1: Fix "Unable to sign without access token" error for sleep endpoints by using alternative validation strategy
-- 0.7.0: **Major refactoring for improved code quality and maintainability**
-  - Restructured codebase with better separation of concerns
-  - Reduced main node file from 1065 to 627 lines (-41%)
-  - Added comprehensive TypeScript interfaces and type safety
-  - Centralized all constants and configuration
-  - Extracted token refresh logic into reusable helper functions
-  - Added extensive JSDoc documentation throughout codebase
-  - Eliminated code duplication in validation and retry logic
-  - Improved error handling with proper n8n error types
-  - No breaking changes - all functionality maintained
-- 0.6.3: Fixed "Unable to sign without access token" error in sleep summary endpoint with enhanced token validation and special handling for sleep-related requests
-- 0.6.2: Fixed "This scope is not allowed" error by ensuring proper scope formatting with "user." prefix in authorization URL
-- 0.6.1: Version update for release
-- 0.6.0: Implemented signature generation and nonce retrieval for enhanced security based on withings-node-oauth2 library
-- 0.5.0: Implemented super-aggressive token handling with extreme validation and enhanced error recovery
-- 0.4.9: Implemented hyper-aggressive token handling with extreme validation and synchronization mechanisms
-- 0.4.8: Implemented ultra-aggressive token refresh with multiple validation strategies and enhanced error recovery
-- 0.4.7: Fixed "Unable to sign without access token" error with enhanced token validation and multi-stage refresh strategy
-- 0.4.6: Improved refresh token handling with explicit refresh token grant type and better token synchronization
-- 0.4.5: Enhanced token validation and authentication with pre-request validation and improved error handling
-- 0.4.4: Fixed "Unable to sign without access token" error with improved token synchronization
-- 0.4.3: Enhanced token error detection and improved retry mechanism with smart backoff
-- 0.4.2: Improved token refresh handling with exponential backoff retry mechanism
-- 0.4.1: Added support for Withings' 30-second token expiration with automatic refresh
-- 0.4.0: Fixed empty Access Token URL field by using correct field name (accessTokenUrl)
-- 0.3.9: Fixed "Unable to sign without access token" error in sleep summary endpoint
-- 0.3.8: Fixed "Unable to sign without access token" error in sleep data endpoint
-- 0.3.7: Changed credential type from genericAuth to oAuth2Api to enable Connect button
-- 0.3.6: Implemented special Withings OAuth2 requirements with custom token exchange
-- 0.3.5: Fixed empty Access Token URL field in credentials
-- 0.3.4: Fixed "Unable to sign without access token" error in OAuth2 authentication
-- 0.3.3: Made OAuth2 URLs hidden in the credentials UI for cleaner interface
-- 0.3.2: Improved compatibility with n8n 1.104.2 for OAuth2 credential fields
-- 0.3.1: Fixed Access Token URL field visibility in credentials
-- 0.3.0: Fixed authentication issues with OAuth2 implementation
-- 0.2.0: Complete implementation of Withings API with all resources and operations
-- 0.1.0: Initial release with OAuth2 authentication support
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+### Latest: v1.0.0
+- **BREAKING CHANGE**: Removed built-in OAuth2 credentials
+- Now requires separate `n8n-nodes-withings-oauth2-credential` package
+- Cleaner separation of concerns between node logic and OAuth2 authentication
+- Simplified maintenance and updates
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-[MIT](LICENSE.md)
+[MIT](LICENSE)
+
+## Links
+
+- [Withings Developer Documentation](https://developer.withings.com/)
+- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/)
+- [OAuth2 Credential Package](https://github.com/schimmmi/n8n-nodes-withings-oauth2-credential)
+
+## Support
+
+For issues, questions, or feature requests, please open an issue on GitHub.
