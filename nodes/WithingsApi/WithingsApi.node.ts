@@ -7,6 +7,7 @@ import {
   INodeExecutionData,
   IHttpRequestOptions,
   NodeApiError,
+  NodeOperationError,
   sleep,
 } from 'n8n-workflow';
 
@@ -167,7 +168,10 @@ async function executeWithRetry(
   }
 
   // This should never be reached, but TypeScript requires it
-  throw new Error('Max retries exceeded without throwing error');
+  throw new NodeOperationError(
+    context.getNode(),
+    'Max retries exceeded without throwing error',
+  );
 }
 
 export class WithingsApi implements INodeType {
