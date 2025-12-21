@@ -3,7 +3,6 @@ import {
   INodeProperties,
   ICredentialTestRequest,
   Icon,
-  IAuthenticateGeneric,
   IHttpRequestOptions,
   IDataObject,
 } from 'n8n-workflow';
@@ -206,25 +205,8 @@ export class WithingsOAuth2Api implements ICredentialType {
     includeScopes: true,
   };
 
-  // Define how to authenticate requests
-  // Withings requires Bearer token in the Authorization header
-  authenticate: IAuthenticateGeneric = {
-    type: 'generic',
-    properties: {
-      headers: {
-        // Use Bearer token authentication with the access token from OAuth2 token data
-        Authorization: '=Bearer {{$credentials.oauthTokenData.access_token}}',
-        // Add cache prevention headers to every authenticated request
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'X-Request-Timestamp': '={{Date.now()}}',
-      },
-      qs: {
-        // Add a timestamp to query parameters to prevent caching
-        _ts: '={{Date.now()}}',
-      },
-    },
-  };
+  // Use default OAuth2 authentication from n8n (inherited from oAuth2Api)
+  // The Bearer token is automatically added by n8n's OAuth2 implementation
 
   // Define a robust test request for credential validation
   test: ICredentialTestRequest = {
