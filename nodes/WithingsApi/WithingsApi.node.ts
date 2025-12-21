@@ -250,7 +250,7 @@ export class WithingsApi implements INodeType {
             description: 'Use stored OAuth2 credentials',
           },
           {
-            name: 'Manual Token (from previous node)',
+            name: 'Manual Token (From Previous Node)',
             value: 'manual',
             description: 'Use access token from previous node output',
           },
@@ -259,9 +259,12 @@ export class WithingsApi implements INodeType {
         description: 'How to authenticate with Withings API',
       },
       {
-        displayName: 'Access Token (from previous node)',
+        displayName: 'Access Token (From Previous Node)',
         name: 'manualAccessToken',
         type: 'string',
+        typeOptions: {
+          password: true,
+        },
         displayOptions: {
           show: {
             authenticationMethod: ['manual'],
