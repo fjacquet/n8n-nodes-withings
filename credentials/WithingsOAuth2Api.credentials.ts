@@ -17,7 +17,7 @@ export class WithingsOAuth2Api implements ICredentialType {
   description = 'OAuth2 authentication for Withings API with custom token exchange';
   documentationUrl = 'https://developer.withings.com/api-reference/#section/Authentication';
   icon: Icon = 'file:../nodes/WithingsApi/withings.svg';
-  extends = ['oAuth2Api'];
+  extends = ['genericOAuth2Api'];
 
   properties: INodeProperties[] = [
     {
@@ -65,6 +65,14 @@ export class WithingsOAuth2Api implements ICredentialType {
       description: 'Comma-separated list of scopes. Common scopes: user.info, user.metrics, user.activity, user.sleepevents',
     },
   ];
+
+  // OAuth token data configuration for token exchange
+  oauthTokenData = {
+    accessToken: '={{ $oauthTokenData.body.access_token }}',
+    refreshToken: '={{ $oauthTokenData.body.refresh_token }}',
+    tokenType: '={{ $oauthTokenData.body.token_type }}',
+    expiresIn: '={{ $oauthTokenData.body.expires_in }}',
+  };
 
   async authenticate(
     credentials: ICredentialDataDecryptedObject,
