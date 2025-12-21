@@ -12,6 +12,12 @@ import * as https from 'https';
 import * as process from 'process';
 
 import { generateSignature, getNonce, formatScope } from '../utils/withings';
+import {
+  WITHINGS_API,
+  DEFAULT_SCOPES,
+  TOKEN_CONFIG,
+  CACHE_HEADERS,
+} from '../utils/constants';
 
 export class WithingsOAuth2Api implements ICredentialType {
   name = 'withingsOAuth2Api';
@@ -31,13 +37,13 @@ export class WithingsOAuth2Api implements ICredentialType {
       displayName: 'Authorization URL',
       name: 'authUrl',
       type: 'hidden',
-      default: 'https://account.withings.com/oauth2_user/authorize2',
+      default: WITHINGS_API.AUTH_URL,
     },
     {
       displayName: 'Access Token URL',
       name: 'accessTokenUrl',
       type: 'hidden',
-      default: 'https://wbsapi.withings.net/v2/oauth2?action=requesttoken',
+      default: WITHINGS_API.TOKEN_URL,
     },
     {
       displayName: 'Client ID',
@@ -62,7 +68,7 @@ export class WithingsOAuth2Api implements ICredentialType {
       displayName: 'Scope',
       name: 'scope',
       type: 'string',
-      default: 'user.info,user.metrics,user.activity,user.sleepevents',
+      default: DEFAULT_SCOPES,
       description: 'Comma-separated list of scopes with the "user." prefix. Common scopes: user.info, user.metrics, user.activity, user.sleepevents',
     },
   ];
@@ -98,9 +104,7 @@ export class WithingsOAuth2Api implements ICredentialType {
         requestOptions.headers = {};
       }
 
-      requestOptions.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-      requestOptions.headers['Pragma'] = 'no-cache';
-      requestOptions.headers['Expires'] = '0';
+      Object.assign(requestOptions.headers, CACHE_HEADERS);
 
       // Add signature and nonce for enhanced security if we have client credentials
       if (credentials.clientId && credentials.clientSecret) {
@@ -176,8 +180,7 @@ export class WithingsOAuth2Api implements ICredentialType {
 
     // Force token refresh before the 30-second expiration
     // Set to 15 seconds to refresh well before the 30-second expiration
-    // This is more aggressive than before (was 20 seconds)
-    expiresIn: 15,
+    expiresIn: TOKEN_CONFIG.EXPIRES_IN,
 
     // Enable automatic token refresh
     autoRefresh: true,
@@ -208,8 +211,7 @@ export class WithingsOAuth2Api implements ICredentialType {
         // Use Bearer token authentication with the access token
         Authorization: '=Bearer {{$credentials.accessToken}}',
         // Add cache prevention headers to every authenticated request
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
+        ...CACHE_HEADERS,
         'X-Request-Timestamp': '={{Date.now()}}', // Add timestamp to prevent caching
       },
       qs: {
@@ -222,7 +224,7 @@ export class WithingsOAuth2Api implements ICredentialType {
   // Define a robust test request for credential validation
   test: ICredentialTestRequest = {
     request: {
-      baseURL: 'https://wbsapi.withings.net',
+      baseURL: WITHINGS_API.BASE_URL,
       url: '/v2/user',
       method: 'GET',
       qs: {
@@ -231,11 +233,10 @@ export class WithingsOAuth2Api implements ICredentialType {
       },
       headers: {
         'Accept': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
+        ...CACHE_HEADERS,
       },
       // Add timeout to prevent hanging
-      timeout: 10000,
+      timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
     },
   };
 }

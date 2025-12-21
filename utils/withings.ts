@@ -1,12 +1,22 @@
+/**
+ * Utility functions for Withings API integration
+ * Handles signature generation, nonce retrieval, and scope formatting
+ */
+
 import { IHttpRequestOptions } from 'n8n-workflow';
 // Use Node.js built-in modules with type declarations
 import * as crypto from 'crypto';
 import * as process from 'process';
 
+import { WITHINGS_API, TOKEN_CONFIG, CACHE_HEADERS } from './constants';
+
 /**
  * Format scope for Withings OAuth2
- * @param {string} scope - Raw scope
- * @returns {string} A formatted version of the scope
+ * Withings requires all scopes to have a "user." prefix
+ * @param scope - Raw scope string (comma-separated)
+ * @returns Formatted scope string with "user." prefix added to each scope
+ * @example
+ * formatScope('info,metrics') // returns 'user.info,user.metrics'
  */
 export function formatScope(scope: string): string {
   return scope
@@ -16,12 +26,16 @@ export function formatScope(scope: string): string {
 }
 
 /**
- * Generate Signature for Withings API
- * @param {string} action - Action type
- * @param {string} clientId - Withings client ID
- * @param {string} clientSecret - Withings client Secret
- * @param {string} baseValue - The signature influencer (timestamp or nonce)
- * @returns {string} - The Generated signature
+ * Generate HMAC-SHA256 signature for Withings API requests
+ * Required for enhanced security in OAuth2 authentication
+ * @param action - Action type (e.g., 'getnonce', 'requesttoken')
+ * @param clientId - Withings client ID from developer account
+ * @param clientSecret - Withings client secret from developer account
+ * @param baseValue - The signature influencer (timestamp or nonce)
+ * @returns The generated HMAC-SHA256 signature in hexadecimal format
+ * @example
+ * generateSignature('getnonce', 'client123', 'secret456', 1234567890)
+ * // returns 'a1b2c3d4e5f6...'
  */
 export function generateSignature(
   action: string,
@@ -36,11 +50,13 @@ export function generateSignature(
 }
 
 /**
- * Generate nonce for Withings API
- * @param {string} clientId - Withings client ID
- * @param {string} clientSecret - Withings client secret
- * @param {Function} makeRequest - Function to make HTTP requests
- * @returns {Promise<string>} Generated nonce
+ * Retrieve a nonce from Withings API for request signing
+ * A nonce is a one-time value required for secure authentication
+ * @param clientId - Withings client ID from developer account
+ * @param clientSecret - Withings client secret from developer account
+ * @param makeRequest - Function to make HTTP requests
+ * @returns Promise resolving to the generated nonce string
+ * @throws Error if nonce retrieval fails or API returns invalid response
  */
 export async function getNonce(
   clientId: string,
@@ -52,7 +68,7 @@ export async function getNonce(
 
     const options: IHttpRequestOptions = {
       method: 'POST',
-      url: 'https://wbsapi.withings.net/v2/signature',
+      url: WITHINGS_API.SIGNATURE_URL,
       body: {
         action: 'getnonce',
         client_id: clientId,
@@ -62,11 +78,9 @@ export async function getNonce(
       json: true,
       headers: {
         'Accept': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        ...CACHE_HEADERS,
       },
-      timeout: 10000,
+      timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
     };
 
     const response = await makeRequest(options);
@@ -86,18 +100,26 @@ export async function getNonce(
 }
 
 /**
- * Normalize month (add leading zero if needed)
- * @param {number} month - Month (0-11)
- * @returns {string} - Normalized month (01-12)
+ * Normalize month value to two-digit format
+ * Adds leading zero if needed and converts 0-based to 1-based month
+ * @param month - Month value (0-11, JavaScript Date format)
+ * @returns Two-digit month string (01-12)
+ * @example
+ * normalizeMonth(0) // returns '01' (January)
+ * normalizeMonth(11) // returns '12' (December)
  */
 export function normalizeMonth(month: number): string {
   return month < 10 ? '0' + (month + 1) : '' + (month + 1);
 }
 
 /**
- * Normalize day (add leading zero if needed)
- * @param {number} day - Day (1-31)
- * @returns {string} - Normalized day (01-31)
+ * Normalize day value to two-digit format
+ * Adds leading zero if needed for single-digit days
+ * @param day - Day of month (1-31)
+ * @returns Two-digit day string (01-31)
+ * @example
+ * normalizeDay(1) // returns '01'
+ * normalizeDay(15) // returns '15'
  */
 export function normalizeDay(day: number): string {
   return day < 10 ? '0' + day : '' + day;
