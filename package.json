@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-withings",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "n8n node for Withings API integration with integrated OAuth2",
   "keywords": [
     "n8n-community-node-package",
