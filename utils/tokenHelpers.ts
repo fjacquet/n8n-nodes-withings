@@ -253,6 +253,7 @@ export async function executeRefreshStrategies(context: IExecuteFunctions): Prom
 /**
  * Validate token for sleep-related requests
  * Special handling required for sleep endpoints
+ * Uses a different endpoint (user/getdevice) for validation to avoid recursive token errors
  * @param context - n8n execution context
  * @param operation - Operation being performed
  */
@@ -260,11 +261,12 @@ export async function validateSleepToken(context: IExecuteFunctions, operation: 
 	try {
 		const uniqueTimestamp = generateUniqueTimestamp();
 
+		// Use user endpoint for validation instead of sleep endpoint to avoid recursive errors
 		await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
 			method: 'GET',
-			url: VALIDATION_ENDPOINTS[2].url, // Sleep endpoint
+			url: VALIDATION_ENDPOINTS[0].url, // User endpoint instead of sleep
 			qs: {
-				action: operation === 'getsummary' ? 'getsummary' : 'get',
+				action: 'getdevice', // Simple action that always works
 				_ts: uniqueTimestamp,
 			},
 			json: true,
@@ -275,10 +277,31 @@ export async function validateSleepToken(context: IExecuteFunctions, operation: 
 			timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
 		});
 
+		// Extra delay for sleep endpoints to ensure token is fully synchronized
 		await sleep(TOKEN_CONFIG.SLEEP_VALIDATION_DELAY);
 	} catch (error) {
-		// If validation fails, wait but continue
-		await sleep(1500);
+		// If validation fails, try one more time with a longer delay
+		try {
+			await sleep(2000);
+			const uniqueTimestamp = generateUniqueTimestamp();
+
+			await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
+				method: 'GET',
+				url: VALIDATION_ENDPOINTS[0].url,
+				qs: {
+					action: 'get', // Even simpler action
+					_ts: uniqueTimestamp,
+				},
+				json: true,
+				headers: createRequestHeaders(),
+				timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
+			});
+
+			await sleep(TOKEN_CONFIG.SLEEP_VALIDATION_DELAY);
+		} catch (retryError) {
+			// If both validation attempts fail, wait but continue anyway
+			await sleep(3000);
+		}
 	}
 }
 

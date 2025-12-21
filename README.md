@@ -135,6 +135,7 @@ Most operations support the following parameters:
 
 ## Version History
 
+- 0.7.1: Fix "Unable to sign without access token" error for sleep endpoints by using alternative validation strategy
 - 0.7.0: **Major refactoring for improved code quality and maintainability**
   - Restructured codebase with better separation of concerns
   - Reduced main node file from 1065 to 627 lines (-41%)
