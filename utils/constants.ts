@@ -8,7 +8,7 @@
 export const WITHINGS_API = {
 	BASE_URL: 'https://wbsapi.withings.net',
 	AUTH_URL: 'https://account.withings.com/oauth2_user/authorize2',
-	TOKEN_URL: 'https://wbsapi.withings.net/v2/oauth2?action=requesttoken',
+	TOKEN_URL: 'https://wbsapi.withings.net/v2/oauth2',
 	SIGNATURE_URL: 'https://wbsapi.withings.net/v2/signature',
 } as const;
 

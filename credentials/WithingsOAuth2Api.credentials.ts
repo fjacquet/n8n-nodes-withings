@@ -187,6 +187,12 @@ export class WithingsOAuth2Api implements ICredentialType {
     format: 'json',
     property: 'body',
 
+    // Explicitly specify where to find the access token in the response
+    accessTokenKey: 'access_token',
+
+    // Explicitly specify where to find the expires_in value in the response
+    expiresInKey: 'expires_in',
+
     // Explicitly set the refresh token grant type for token refresh
     refreshGrantType: 'refresh_token',
 

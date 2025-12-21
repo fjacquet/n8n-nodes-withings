@@ -135,6 +135,8 @@ Most operations support the following parameters:
 
 ## Version History
 
+- 0.7.7: **CRITICAL FIX**: Explicitly configure token response parsing with accessTokenKey and expiresInKey
+- 0.7.6: **CRITICAL FIX**: Fix OAuth2 Token URL - remove query parameter and use clean URL as per Withings documentation
 - 0.7.5: Restore authenticate section that was accidentally removed - required for OAuth2 to work
 - 0.7.4: **CRITICAL FIX**: Fix OAuth2 token path - use correct oauthTokenData.access_token instead of accessToken
 - 0.7.3: **CRITICAL FIX**: Correct token expiration time from 30 seconds to 3600 seconds (1 hour) - major improvement in stability
