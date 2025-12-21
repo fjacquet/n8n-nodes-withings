@@ -25,11 +25,11 @@ export const ENDPOINTS = {
 
 /**
  * Token refresh configuration
- * Withings tokens expire after 30 seconds, requiring aggressive refresh handling
+ * Withings tokens actually expire after 3600 seconds (1 hour), not 30 seconds as initially thought
  */
 export const TOKEN_CONFIG = {
-	/** Token expiration time in seconds (refresh 15 seconds before 30-second expiration) */
-	EXPIRES_IN: 15,
+	/** Token expiration time in seconds - not used, we let the API response determine expiration */
+	EXPIRES_IN: 3600,
 	/** Maximum number of retry attempts for failed requests */
 	MAX_RETRIES: 5,
 	/** Base delay in milliseconds for exponential backoff */

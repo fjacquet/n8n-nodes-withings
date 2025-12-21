@@ -74,7 +74,7 @@ export class WithingsOAuth2Api implements ICredentialType {
   ];
 
   // Override tokenDataPostReceiveProcess to add Withings-specific parameters
-  // Withings tokens expire after 30 seconds, so we need aggressive refresh handling
+  // Withings requires 'action=requesttoken' parameter in token requests
   tokenDataPostReceiveProcess = {
     // Include credentials in the refresh request body
     includeCredentialsOnRefreshOnBody: true,
@@ -178,11 +178,9 @@ export class WithingsOAuth2Api implements ICredentialType {
       return requestOptions;
     },
 
-    // Force token refresh before the 30-second expiration
-    // Set to 15 seconds to refresh well before the 30-second expiration
-    expiresIn: TOKEN_CONFIG.EXPIRES_IN,
-
     // Enable automatic token refresh
+    // Note: Withings actually returns expires_in: 3600 (1 hour), not 30 seconds
+    // Let n8n use the value from the API response instead of overriding it
     autoRefresh: true,
 
     // Ensure proper token format and handling

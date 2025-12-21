@@ -45,7 +45,7 @@ The Withings API has some special requirements for OAuth2 authentication:
 - The token request requires an additional `action=requesttoken` parameter
 - Authentication for API requests uses Bearer token in the Authorization header
 - Token exchange requires specific formatting of the request body
-- **Access tokens expire after 30 seconds** and need to be refreshed frequently
+- **Access tokens expire after 3600 seconds (1 hour)** and are automatically refreshed by n8n
 - **Signature generation and nonce retrieval** are required for enhanced security
 
 This node handles these requirements automatically through a custom authentication implementation. The token refresh is managed automatically with the following mechanisms:
@@ -57,7 +57,7 @@ This node handles these requirements automatically through a custom authenticati
    - Handles scope formatting with proper "user." prefixes
    - Gracefully falls back to standard authentication if signature generation fails
 
-2. **Super-Aggressive Token Refresh**: Tokens are refreshed 15 seconds before their 30-second expiration (previously 10 seconds)
+2. **Automatic Token Refresh**: Tokens are automatically refreshed by n8n before expiration
    - Explicitly specifies refresh_token in the grant type
    - Includes the refresh token in token refresh requests
    - Ensures proper token synchronization between requests
@@ -135,7 +135,8 @@ Most operations support the following parameters:
 
 ## Version History
 
-- 0.7.2: Optimize token timing for sleep endpoints - reduce validation delays to prevent token expiration (tokens only valid for 30 seconds)
+- 0.7.3: **CRITICAL FIX**: Correct token expiration time from 30 seconds to 3600 seconds (1 hour) - major improvement in stability
+- 0.7.2: Optimize token timing for sleep endpoints - reduce validation delays
 - 0.7.1: Fix "Unable to sign without access token" error for sleep endpoints by using alternative validation strategy
 - 0.7.0: **Major refactoring for improved code quality and maintainability**
   - Restructured codebase with better separation of concerns

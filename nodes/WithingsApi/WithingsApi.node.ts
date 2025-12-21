@@ -70,8 +70,8 @@ async function executeWithRetry(
     tokenRefreshed: false,
   };
 
-  // Simplified token preparation - reduce pre-validation to minimize time before actual request
-  // Withings tokens only last 30 seconds, so we need to minimize delays
+  // Simplified token preparation - quick validation before actual request
+  // Withings tokens last 1 hour (3600 seconds) according to API response
 
   // Quick single validation attempt instead of multiple attempts
   try {
