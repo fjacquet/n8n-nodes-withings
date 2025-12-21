@@ -207,13 +207,11 @@ export class WithingsOAuth2Api implements ICredentialType {
     properties: {
       headers: {
         // Use Bearer token authentication with the access token
-        // n8n OAuth2 stores the token in oauthTokenData.access_token
-        Authorization: '=Bearer {{$credentials.oauthTokenData.access_token}}',
+        Authorization: '=Bearer {{$credentials.accessToken}}',
         // Add cache prevention headers to every authenticated request
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Request-Timestamp': '={{Date.now()}}', // Add timestamp to prevent caching
+        'X-Request-Timestamp': '={{Date.now()}}',
       },
       qs: {
         // Add a timestamp to query parameters to prevent caching
