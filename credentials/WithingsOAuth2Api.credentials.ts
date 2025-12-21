@@ -212,8 +212,8 @@ export class WithingsOAuth2Api implements ICredentialType {
     type: 'generic',
     properties: {
       headers: {
-        // Use Bearer token authentication with the access token
-        Authorization: '=Bearer {{$credentials.accessToken}}',
+        // Use Bearer token authentication with the access token from OAuth2 token data
+        Authorization: '=Bearer {{$credentials.oauthTokenData.access_token}}',
         // Add cache prevention headers to every authenticated request
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
