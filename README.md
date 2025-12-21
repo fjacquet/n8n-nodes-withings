@@ -135,6 +135,7 @@ Most operations support the following parameters:
 
 ## Version History
 
+- 0.7.2: Optimize token timing for sleep endpoints - reduce validation delays to prevent token expiration (tokens only valid for 30 seconds)
 - 0.7.1: Fix "Unable to sign without access token" error for sleep endpoints by using alternative validation strategy
 - 0.7.0: **Major refactoring for improved code quality and maintainability**
   - Restructured codebase with better separation of concerns

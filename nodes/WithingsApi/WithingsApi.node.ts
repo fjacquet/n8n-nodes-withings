@@ -17,11 +17,8 @@ import {
   TOKEN_CONFIG,
 } from '../../utils/constants';
 import {
-  performPreValidation,
-  performDirectTokenRefresh,
   refreshTokenForRetry,
   executeRefreshStrategies,
-  validateSleepToken,
   isTokenError,
   calculateBackoffDelay,
   generateUniqueTimestamp,
@@ -73,12 +70,35 @@ async function executeWithRetry(
     tokenRefreshed: false,
   };
 
-  // Perform pre-validation to ensure token is valid
-  await performPreValidation(context);
+  // Simplified token preparation - reduce pre-validation to minimize time before actual request
+  // Withings tokens only last 30 seconds, so we need to minimize delays
 
-  // Perform direct token refresh attempts
-  const directRefreshResult = await performDirectTokenRefresh(context);
-  retryContext.tokenRefreshed = directRefreshResult.success;
+  // Quick single validation attempt instead of multiple attempts
+  try {
+    const uniqueTimestamp = generateUniqueTimestamp();
+    await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
+      method: 'GET',
+      url: `${WITHINGS_API.BASE_URL}${ENDPOINTS.USER}`,
+      qs: {
+        action: 'getdevice',
+        _ts: uniqueTimestamp,
+      },
+      json: true,
+      headers: {
+        ...createRequestHeaders(),
+        'X-Request-ID': `quick-validation-${uniqueTimestamp}`,
+      },
+      timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
+    });
+
+    retryContext.tokenRefreshed = true;
+    // Minimal delay after validation
+    await sleep(500);
+  } catch (validationError) {
+    // If quick validation fails, continue anyway - the retry logic will handle it
+    retryContext.tokenRefreshed = false;
+    await sleep(1000);
+  }
 
   // Create a fresh copy of the options for each attempt
   const createFreshOptions = (): IHttpRequestOptions => {
@@ -111,13 +131,9 @@ async function executeWithRetry(
         const refreshResult = await refreshTokenForRetry(context, retryContext.retries);
         retryContext.tokenRefreshed = refreshResult.success;
       } else {
-        // Initial delay to ensure token is ready
-        await sleep(TOKEN_CONFIG.INITIAL_DELAY);
-      }
-
-      // Special handling for sleep-related requests
-      if (resource === 'sleep') {
-        await validateSleepToken(context, operation);
+        // Shorter initial delay to minimize time between token refresh and actual request
+        // Sleep endpoints are particularly sensitive to timing
+        await sleep(resource === 'sleep' ? 500 : TOKEN_CONFIG.INITIAL_DELAY);
       }
 
       // Create fresh options for this attempt
