@@ -9,7 +9,6 @@ import {
 import {
   WITHINGS_API,
   DEFAULT_SCOPES,
-  TOKEN_CONFIG,
 } from '../utils/constants';
 
 export class WithingsOAuth2Api implements ICredentialType {
