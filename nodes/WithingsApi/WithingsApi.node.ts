@@ -538,9 +538,19 @@ export class WithingsApi implements INodeType {
       console.log('Available keys:', Object.keys(credentials));
       console.log('Has oauthTokenData:', !!credentials.oauthTokenData);
       if (credentials.oauthTokenData) {
-        console.log('oauthTokenData keys:', Object.keys(credentials.oauthTokenData as object));
-        console.log('oauthTokenData.access_token exists:', !!(credentials.oauthTokenData as any).access_token);
-        console.log('oauthTokenData.access_token length:', (credentials.oauthTokenData as any).access_token ? (credentials.oauthTokenData as any).access_token.length : 0);
+        const tokenData = credentials.oauthTokenData as any;
+        console.log('oauthTokenData keys:', Object.keys(tokenData));
+        console.log('oauthTokenData FULL CONTENT:', JSON.stringify(tokenData, null, 2));
+        console.log('oauthTokenData.access_token exists:', !!tokenData.access_token);
+        console.log('oauthTokenData.access_token length:', tokenData.access_token ? tokenData.access_token.length : 0);
+
+        // Check if error information exists
+        if (tokenData.status) {
+          console.log('Token request STATUS:', tokenData.status);
+        }
+        if (tokenData.error) {
+          console.log('Token request ERROR:', tokenData.error);
+        }
       }
       console.log('=====================================');
     } catch (debugError) {
