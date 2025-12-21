@@ -135,6 +135,7 @@ Most operations support the following parameters:
 
 ## Version History
 
+- 0.7.4: **CRITICAL FIX**: Fix OAuth2 token path - use correct oauthTokenData.access_token instead of accessToken
 - 0.7.3: **CRITICAL FIX**: Correct token expiration time from 30 seconds to 3600 seconds (1 hour) - major improvement in stability
 - 0.7.2: Optimize token timing for sleep endpoints - reduce validation delays
 - 0.7.1: Fix "Unable to sign without access token" error for sleep endpoints by using alternative validation strategy
