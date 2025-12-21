@@ -1,8 +1,12 @@
 import { WithingsApi } from './nodes/WithingsApi/WithingsApi.node';
+import { WithingsTokenExchange } from './nodes/WithingsTokenExchange/WithingsTokenExchange.node';
+import { WithingsOAuth2Api } from './credentials/WithingsOAuth2Api.credentials';
 
 export const nodes = [
   WithingsApi,
+  WithingsTokenExchange,
 ];
 
-// No credentials exported - use n8n-nodes-withings-oauth2-credential package
-export const credentials = [];
+export const credentials = [
+  WithingsOAuth2Api,
+];

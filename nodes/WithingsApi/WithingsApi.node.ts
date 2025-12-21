@@ -67,6 +67,7 @@ async function executeWithRetry(
   baseQs: IDataObject,
   resource: string,
   operation: string,
+  manualToken?: string,
 ): Promise<IWithingsResponse> {
   const retryContext: IRetryContext = {
     retries: 0,
@@ -74,39 +75,42 @@ async function executeWithRetry(
     tokenRefreshed: false,
   };
 
-  // Simplified token preparation - quick validation before actual request
-  // Withings tokens last 1 hour (3600 seconds) according to API response
+  // If using manual token, skip OAuth2 validation
+  if (!manualToken) {
+    // Simplified token preparation - quick validation before actual request
+    // Withings tokens last 1 hour (3600 seconds) according to API response
 
-  // Quick single validation attempt instead of multiple attempts
-  try {
-    const uniqueTimestamp = generateUniqueTimestamp();
-    await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
-      method: 'GET',
-      url: `${WITHINGS_API.BASE_URL}${ENDPOINTS.USER}`,
-      qs: {
-        action: 'getdevice',
-        _ts: uniqueTimestamp,
-      },
-      json: true,
-      headers: {
-        ...createRequestHeaders(),
-        'X-Request-ID': `quick-validation-${uniqueTimestamp}`,
-      },
-      timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
-    });
+    // Quick single validation attempt instead of multiple attempts
+    try {
+      const uniqueTimestamp = generateUniqueTimestamp();
+      await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
+        method: 'GET',
+        url: `${WITHINGS_API.BASE_URL}${ENDPOINTS.USER}`,
+        qs: {
+          action: 'getdevice',
+          _ts: uniqueTimestamp,
+        },
+        json: true,
+        headers: {
+          ...createRequestHeaders(),
+          'X-Request-ID': `quick-validation-${uniqueTimestamp}`,
+        },
+        timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
+      });
 
-    retryContext.tokenRefreshed = true;
-    // Minimal delay after validation
-    await sleep(500);
-  } catch (validationError) {
-    // If quick validation fails, continue anyway - the retry logic will handle it
-    retryContext.tokenRefreshed = false;
-    await sleep(1000);
+      retryContext.tokenRefreshed = true;
+      // Minimal delay after validation
+      await sleep(500);
+    } catch (validationError) {
+      // If quick validation fails, continue anyway - the retry logic will handle it
+      retryContext.tokenRefreshed = false;
+      await sleep(1000);
+    }
   }
 
   // Create a fresh copy of the options for each attempt
   const createFreshOptions = (): IHttpRequestOptions => {
-    return {
+    const options: IHttpRequestOptions = {
       method: 'GET',
       url: `${WITHINGS_API.BASE_URL}${baseEndpoint}`,
       qs: {
@@ -120,6 +124,13 @@ async function executeWithRetry(
         'X-Request-Attempt': `${retryContext.retries + 1}`,
       },
     };
+
+    // Add Bearer token header if using manual token
+    if (manualToken) {
+      options.headers!['Authorization'] = `Bearer ${manualToken}`;
+    }
+
+    return options;
   };
 
   // Main request loop with retry logic
@@ -131,9 +142,11 @@ async function executeWithRetry(
         const delay = calculateBackoffDelay(retryContext.retries);
         await sleep(delay);
 
-        // Force token refresh before each retry
-        const refreshResult = await refreshTokenForRetry(context, retryContext.retries);
-        retryContext.tokenRefreshed = refreshResult.success;
+        // Force token refresh before each retry (only for OAuth2 mode)
+        if (!manualToken) {
+          const refreshResult = await refreshTokenForRetry(context, retryContext.retries);
+          retryContext.tokenRefreshed = refreshResult.success;
+        }
       } else {
         // Shorter initial delay to minimize time between token refresh and actual request
         // Sleep endpoints are particularly sensitive to timing
@@ -143,12 +156,14 @@ async function executeWithRetry(
       // Create fresh options for this attempt
       const freshOptions = createFreshOptions();
 
-      // Make the main API request
-      const response = await context.helpers.requestWithAuthentication.call(
-        context,
-        'withingsOAuth2Api',
-        freshOptions,
-      );
+      // Make the main API request - use direct httpRequest for manual token, otherwise use OAuth2
+      const response = manualToken
+        ? await context.helpers.httpRequest(freshOptions)
+        : await context.helpers.requestWithAuthentication.call(
+            context,
+            'withingsOAuth2Api',
+            freshOptions,
+          );
 
       // Success - wait a moment to ensure side effects are complete
       await sleep(500);
@@ -161,16 +176,25 @@ async function executeWithRetry(
 
         if (retryContext.retries >= retryContext.maxRetries) {
           // Max retries reached - throw detailed error
-          const errorMessage = createTokenErrorMessage(
-            retryContext.maxRetries,
-            error,
-            retryContext.tokenRefreshed,
-          );
+          const errorMessage = manualToken
+            ? `Manual token authentication failed after ${retryContext.maxRetries} retries. Please ensure the token is valid and not expired.`
+            : createTokenErrorMessage(
+                retryContext.maxRetries,
+                error,
+                retryContext.tokenRefreshed,
+              );
 
           throw new NodeApiError(context.getNode(), error, { message: errorMessage });
         }
 
-        // Execute comprehensive refresh strategies
+        // For manual token mode, we can't refresh, so fail faster
+        if (manualToken) {
+          throw new NodeApiError(context.getNode(), error, {
+            message: 'Manual token authentication failed. The token may be expired. Please use the Token Exchange node to get a new token.',
+          });
+        }
+
+        // Execute comprehensive refresh strategies (OAuth2 mode only)
         const delay = calculateBackoffDelay(retryContext.retries, 1500);
         await sleep(delay);
 
@@ -211,10 +235,42 @@ export class WithingsApi implements INodeType {
     credentials: [
       {
         name: 'withingsOAuth2Api',
-        required: true,
+        required: false,
       },
     ],
     properties: [
+      {
+        displayName: 'Authentication Method',
+        name: 'authenticationMethod',
+        type: 'options',
+        options: [
+          {
+            name: 'OAuth2 Credentials',
+            value: 'oauth2',
+            description: 'Use stored OAuth2 credentials',
+          },
+          {
+            name: 'Manual Token (from previous node)',
+            value: 'manual',
+            description: 'Use access token from previous node output',
+          },
+        ],
+        default: 'oauth2',
+        description: 'How to authenticate with Withings API',
+      },
+      {
+        displayName: 'Access Token (from previous node)',
+        name: 'manualAccessToken',
+        type: 'string',
+        displayOptions: {
+          show: {
+            authenticationMethod: ['manual'],
+          },
+        },
+        default: '={{ $json.accessToken }}',
+        description: 'Access token from Token Exchange node',
+        required: true,
+      },
       {
         displayName: 'Resource',
         name: 'resource',
@@ -535,45 +591,56 @@ export class WithingsApi implements INodeType {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
 
-    // Get credentials and check if token refresh is needed
-    const credentials = await this.getCredentials('withingsOAuth2Api');
+    // Determine authentication method
+    const authenticationMethod = this.getNodeParameter('authenticationMethod', 0, 'oauth2') as string;
+    let manualAccessToken: string | undefined;
 
-    console.log('=== WITHINGS DEBUG: Checking credentials ===');
-    console.log('Has accessToken:', !!credentials.accessToken);
-    console.log('Has refreshToken:', !!credentials.refreshToken);
-    console.log('ExpiresAt:', credentials.expiresAt);
+    if (authenticationMethod === 'manual') {
+      // Get manual access token from parameter (from previous node)
+      manualAccessToken = this.getNodeParameter('manualAccessToken', 0) as string;
+      console.log('=== WITHINGS DEBUG: Using manual token ===');
+      console.log('Has manual token:', !!manualAccessToken);
+    } else {
+      // Get credentials and check if token refresh is needed
+      const credentials = await this.getCredentials('withingsOAuth2Api');
 
-    // Check if token needs refresh
-    if (credentials.refreshToken && credentials.expiresAt) {
-      const needsRefresh = isTokenExpired(credentials.expiresAt as number);
-      console.log('Token needs refresh:', needsRefresh);
+      console.log('=== WITHINGS DEBUG: Checking credentials ===');
+      console.log('Has accessToken:', !!credentials.accessToken);
+      console.log('Has refreshToken:', !!credentials.refreshToken);
+      console.log('ExpiresAt:', credentials.expiresAt);
 
-      if (needsRefresh) {
-        console.log('=== Refreshing expired token ===');
-        try {
-          const tokenResponse = await refreshAccessToken(
-            this,
-            credentials.clientId as string,
-            credentials.clientSecret as string,
-            credentials.refreshToken as string,
-          );
+      // Check if token needs refresh
+      if (credentials.refreshToken && credentials.expiresAt) {
+        const needsRefresh = isTokenExpired(credentials.expiresAt as number);
+        console.log('Token needs refresh:', needsRefresh);
 
-          if (tokenResponse.status === 0 && tokenResponse.body) {
-            console.log('Token refreshed successfully!');
-            console.log('NOTE: Please update your credentials with the new tokens:');
-            console.log('Access Token:', tokenResponse.body.access_token.substring(0, 20) + '...');
-            console.log('Refresh Token:', tokenResponse.body.refresh_token.substring(0, 20) + '...');
-            console.log('Expires At:', Math.floor(Date.now() / 1000) + tokenResponse.body.expires_in);
+        if (needsRefresh) {
+          console.log('=== Refreshing expired token ===');
+          try {
+            const tokenResponse = await refreshAccessToken(
+              this,
+              credentials.clientId as string,
+              credentials.clientSecret as string,
+              credentials.refreshToken as string,
+            );
 
-            // For now, continue with old token and inform user to update credentials
-            // In a future version, we could try to update credentials automatically
-          } else {
-            console.error('Token refresh failed:', tokenResponse);
-            throw new NodeApiError(this.getNode(), { message: 'Token refresh failed. Please reconnect your Withings account.' } as any);
+            if (tokenResponse.status === 0 && tokenResponse.body) {
+              console.log('Token refreshed successfully!');
+              console.log('NOTE: Please update your credentials with the new tokens:');
+              console.log('Access Token:', tokenResponse.body.access_token.substring(0, 20) + '...');
+              console.log('Refresh Token:', tokenResponse.body.refresh_token.substring(0, 20) + '...');
+              console.log('Expires At:', Math.floor(Date.now() / 1000) + tokenResponse.body.expires_in);
+
+              // For now, continue with old token and inform user to update credentials
+              // In a future version, we could try to update credentials automatically
+            } else {
+              console.error('Token refresh failed:', tokenResponse);
+              throw new NodeApiError(this.getNode(), { message: 'Token refresh failed. Please reconnect your Withings account.' } as any);
+            }
+          } catch (error) {
+            console.error('Error refreshing token:', error);
+            throw new NodeApiError(this.getNode(), error as any);
           }
-        } catch (error) {
-          console.error('Error refreshing token:', error);
-          throw new NodeApiError(this.getNode(), error as any);
         }
       }
     }
@@ -631,7 +698,7 @@ export class WithingsApi implements INodeType {
         }
 
         // Execute API request with retry logic
-        const response = await executeWithRetry(this, endpoint, qs, resource, operation);
+        const response = await executeWithRetry(this, endpoint, qs, resource, operation, manualAccessToken);
         // Check if the response contains an error
         if (response.status !== 0) {
           const errorMessage = `Withings API Error: ${response.status} - ${response.error || 'Unknown error'}`;
