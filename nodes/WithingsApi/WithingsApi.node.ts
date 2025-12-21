@@ -25,6 +25,10 @@ import {
   createRequestHeaders,
   createTokenErrorMessage,
 } from '../../utils/tokenHelpers';
+import {
+  refreshAccessToken,
+  isTokenExpired,
+} from '../../utils/oauth2Helper';
 import { IWithingsResponse, IRetryContext } from '../../utils/types';
 
 /**
@@ -531,31 +535,50 @@ export class WithingsApi implements INodeType {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
 
-    // DEBUG: Log credential structure
-    try {
-      const credentials = await this.getCredentials('withingsOAuth2Api');
-      console.log('=== WITHINGS DEBUG: Credential Keys ===');
-      console.log('Available keys:', Object.keys(credentials));
-      console.log('Has oauthTokenData:', !!credentials.oauthTokenData);
-      if (credentials.oauthTokenData) {
-        const tokenData = credentials.oauthTokenData as any;
-        console.log('oauthTokenData keys:', Object.keys(tokenData));
-        console.log('oauthTokenData FULL CONTENT:', JSON.stringify(tokenData, null, 2));
-        console.log('oauthTokenData.access_token exists:', !!tokenData.access_token);
-        console.log('oauthTokenData.access_token length:', tokenData.access_token ? tokenData.access_token.length : 0);
+    // Get credentials and check if token refresh is needed
+    const credentials = await this.getCredentials('withingsOAuth2Api');
 
-        // Check if error information exists
-        if (tokenData.status) {
-          console.log('Token request STATUS:', tokenData.status);
-        }
-        if (tokenData.error) {
-          console.log('Token request ERROR:', tokenData.error);
+    console.log('=== WITHINGS DEBUG: Checking credentials ===');
+    console.log('Has accessToken:', !!credentials.accessToken);
+    console.log('Has refreshToken:', !!credentials.refreshToken);
+    console.log('ExpiresAt:', credentials.expiresAt);
+
+    // Check if token needs refresh
+    if (credentials.refreshToken && credentials.expiresAt) {
+      const needsRefresh = isTokenExpired(credentials.expiresAt as number);
+      console.log('Token needs refresh:', needsRefresh);
+
+      if (needsRefresh) {
+        console.log('=== Refreshing expired token ===');
+        try {
+          const tokenResponse = await refreshAccessToken(
+            this,
+            credentials.clientId as string,
+            credentials.clientSecret as string,
+            credentials.refreshToken as string,
+          );
+
+          if (tokenResponse.status === 0 && tokenResponse.body) {
+            console.log('Token refreshed successfully!');
+            console.log('NOTE: Please update your credentials with the new tokens:');
+            console.log('Access Token:', tokenResponse.body.access_token.substring(0, 20) + '...');
+            console.log('Refresh Token:', tokenResponse.body.refresh_token.substring(0, 20) + '...');
+            console.log('Expires At:', Math.floor(Date.now() / 1000) + tokenResponse.body.expires_in);
+
+            // For now, continue with old token and inform user to update credentials
+            // In a future version, we could try to update credentials automatically
+          } else {
+            console.error('Token refresh failed:', tokenResponse);
+            throw new NodeApiError(this.getNode(), { message: 'Token refresh failed. Please reconnect your Withings account.' } as any);
+          }
+        } catch (error) {
+          console.error('Error refreshing token:', error);
+          throw new NodeApiError(this.getNode(), error as any);
         }
       }
-      console.log('=====================================');
-    } catch (debugError) {
-      console.error('DEBUG: Error inspecting credentials:', debugError);
     }
+
+    console.log('==========================================');
 
     // For each item
     for (let i = 0; i < items.length; i++) {

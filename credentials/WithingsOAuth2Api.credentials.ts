@@ -1,31 +1,24 @@
 import {
   ICredentialType,
   INodeProperties,
-  ICredentialTestRequest,
   Icon,
   IHttpRequestOptions,
-  IDataObject,
-  IAuthenticateGeneric,
+  ICredentialDataDecryptedObject,
 } from 'n8n-workflow';
-// Use Node.js built-in modules with type declarations
-import * as https from 'https';
-import * as process from 'process';
 
-import { generateSignature, getNonce, formatScope } from '../utils/withings';
 import {
   WITHINGS_API,
   DEFAULT_SCOPES,
-  TOKEN_CONFIG,
-  CACHE_HEADERS,
 } from '../utils/constants';
 
 export class WithingsOAuth2Api implements ICredentialType {
   name = 'withingsOAuth2Api';
   displayName = 'Withings OAuth2 API';
   description = 'OAuth2 authentication for Withings API with custom token exchange';
-  documentationUrl = 'https://developer.withings.com/oauth2/';
+  documentationUrl = 'https://developer.withings.com/api-reference/#section/Authentication';
   icon: Icon = 'file:../nodes/WithingsApi/withings.svg';
   extends = ['oAuth2Api'];
+
   properties: INodeProperties[] = [
     {
       displayName: 'Grant Type',
@@ -69,189 +62,68 @@ export class WithingsOAuth2Api implements ICredentialType {
       name: 'scope',
       type: 'string',
       default: DEFAULT_SCOPES,
-      description: 'Comma-separated list of scopes with the "user." prefix. Common scopes: user.info, user.metrics, user.activity, user.sleepevents',
+      description: 'Comma-separated list of scopes. Common scopes: user.info, user.metrics, user.activity, user.sleepevents',
     },
   ];
 
-  // Override oauthTokenData to add Withings-specific parameters
-  // Withings requires 'action=requesttoken' parameter in token requests
-  oauthTokenData = {
-    // Include credentials in the refresh request body
-    includeCredentialsOnRefreshOnBody: true,
+  async authenticate(
+    credentials: ICredentialDataDecryptedObject,
+    requestOptions: IHttpRequestOptions,
+  ): Promise<IHttpRequestOptions> {
+    console.log('=== WITHINGS DEBUG: authenticate() called ===');
+    console.log('Request URL:', requestOptions.url);
+    console.log('Request method:', requestOptions.method);
+    console.log('Request body type:', typeof requestOptions.body);
 
-    // Pre-authentication hook - called before making token request
-    preAuthentication: async (requestOptions: IHttpRequestOptions, credentials: IDataObject) => {
-      console.log('=== WITHINGS DEBUG: preSend called ===');
-      console.log('Request URL:', requestOptions.url);
-      console.log('Credentials keys:', Object.keys(credentials));
+    // For token exchange requests to Withings OAuth2 endpoint
+    if (requestOptions.url?.includes('/oauth2') && requestOptions.method === 'POST') {
+      console.log('=== Intercepting OAuth2 token request ===');
 
-      // Add action=requesttoken parameter to token request - required by Withings
-      if (!requestOptions.body) {
-        requestOptions.body = {};
-      }
+      // Parse existing body to get the authorization code and other params
+      const bodyString = requestOptions.body as string;
+      const params = new Map<string, string>();
 
-      // Use type assertion to tell TypeScript that body is an object with properties
-      const bodyObj = requestOptions.body as Record<string, any>;
-      bodyObj.action = 'requesttoken';
-      console.log('Body after adding action:', Object.keys(bodyObj));
-
-      // Only format scope if it doesn't already have the user. prefix
-      if (bodyObj.scope) {
-        const scopeStr = bodyObj.scope as string;
-        // Check if the scope already has the user. prefix
-        if (!scopeStr.includes('user.')) {
-          bodyObj.scope = formatScope(scopeStr);
-        }
-      }
-
-      // Add headers to prevent caching issues
-      if (!requestOptions.headers) {
-        requestOptions.headers = {};
-      }
-
-      Object.assign(requestOptions.headers, CACHE_HEADERS);
-
-      // Add signature and nonce for enhanced security if we have client credentials
-      if (credentials.clientId && credentials.clientSecret) {
-        try {
-          // Get a nonce from Withings API
-          const nonce = await getNonce(
-            credentials.clientId as string,
-            credentials.clientSecret as string,
-            async (options) => {
-              // Use a simple HTTP request without external dependencies
-              const http = https;
-
-              return new Promise((resolve, reject) => {
-                const requestOptions = {
-                  method: options.method,
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers,
-                  },
-                };
-
-                const req = http.request(options.url, requestOptions, (res: any) => {
-                  let data = '';
-
-                  res.on('data', (chunk: any) => {
-                    data += chunk;
-                  });
-
-                  res.on('end', () => {
-                    try {
-                      const parsedData = JSON.parse(data);
-                      resolve({ body: parsedData.body });
-                    } catch (e) {
-                      reject(e);
-                    }
-                  });
-                });
-
-                req.on('error', (error: any) => {
-                  reject(error);
-                });
-
-                if (options.body) {
-                  req.write(JSON.stringify(options.body));
-                }
-
-                req.end();
-              });
-            }
-          );
-
-          // Add nonce to the request
-          bodyObj.nonce = nonce;
-
-          // Generate and add signature
-          bodyObj.signature = generateSignature(
-            'requesttoken',
-            credentials.clientId as string,
-            credentials.clientSecret as string,
-            nonce
-          );
-        } catch (error) {
-          // Use a safer approach than console.error for TypeScript compatibility
-          if (process && process.stderr && process.stderr.write) {
-            process.stderr.write(`Error adding signature and nonce: ${error}\n`);
+      // Parse URL-encoded body manually
+      if (bodyString) {
+        bodyString.split('&').forEach((pair) => {
+          const [key, value] = pair.split('=');
+          if (key && value) {
+            params.set(key, decodeURIComponent(value));
           }
-          // Continue without signature if there's an error
-        }
+        });
       }
 
-      console.log('=== WITHINGS DEBUG: preSend completed ===');
-      return requestOptions;
-    },
+      console.log('Original body params:', Array.from(params.keys()));
 
-    // Post-receive processing to log what we got back
-    postReceive: async (response: any) => {
-      console.log('=== WITHINGS DEBUG: Token Response Received ===');
-      console.log('Response keys:', Object.keys(response));
-      console.log('Response.body keys:', response.body ? Object.keys(response.body) : 'no body');
-      console.log('Response.body.access_token exists:', response.body?.access_token ? 'YES' : 'NO');
-      console.log('Response.body.access_token length:', response.body?.access_token?.length || 0);
-      console.log('Response.body.refresh_token exists:', response.body?.refresh_token ? 'YES' : 'NO');
-      console.log('Response.body.expires_in:', response.body?.expires_in);
-      console.log('Response status:', response.status);
-      console.log('===========================================');
-      return response;
-    },
+      // Determine grant type (authorization_code or refresh_token)
+      const grantType = params.get('grant_type') || 'authorization_code';
 
-    // Enable automatic token refresh
-    // Note: Withings actually returns expires_in: 3600 (1 hour), not 30 seconds
-    // Let n8n use the value from the API response instead of overriding it
-    autoRefresh: true,
+      // Create new body with Withings-specific action parameter
+      const newBodyParts = [
+        'action=requesttoken', // REQUIRED by Withings!
+        `grant_type=${encodeURIComponent(grantType)}`,
+        `client_id=${encodeURIComponent(params.get('client_id') || (credentials.clientId as string))}`,
+        `client_secret=${encodeURIComponent(params.get('client_secret') || (credentials.clientSecret as string))}`,
+      ];
 
-    // Ensure proper token format and handling
-    format: 'json',
-    property: 'body',
+      // Add grant-type specific parameters
+      if (grantType === 'authorization_code') {
+        newBodyParts.push(`code=${encodeURIComponent(params.get('code') || '')}`);
+        newBodyParts.push(`redirect_uri=${encodeURIComponent(params.get('redirect_uri') || '')}`);
+      } else if (grantType === 'refresh_token') {
+        newBodyParts.push(`refresh_token=${encodeURIComponent(params.get('refresh_token') || '')}`);
+      }
 
-    // Explicitly specify where to find the access token in the response
-    accessTokenKey: 'access_token',
+      requestOptions.body = newBodyParts.join('&');
+      requestOptions.headers = {
+        ...requestOptions.headers,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
 
-    // Explicitly specify where to find the expires_in value in the response
-    expiresInKey: 'expires_in',
+      console.log('Modified body params:', newBodyParts.map(p => p.split('=')[0]));
+      console.log('=========================================');
+    }
 
-    // Explicitly set the refresh token grant type for token refresh
-    refreshGrantType: 'refresh_token',
-
-    // Include the refresh token in the body of the refresh request
-    includeRefreshToken: true,
-
-    // Specify the key name for the refresh token in the request
-    refreshTokenKey: 'refresh_token',
-
-    // Ensure proper scope handling during refresh
-    includeScopes: true,
-  };
-
-  // Define authentication - token is stored flat in oauthTokenData after extraction
-  authenticate: IAuthenticateGeneric = {
-    type: 'generic',
-    properties: {
-      headers: {
-        Authorization: '={{"Bearer " + $credentials.oauthTokenData.access_token}}',
-      },
-    },
-  };
-
-  // Define a robust test request for credential validation
-  test: ICredentialTestRequest = {
-    request: {
-      baseURL: WITHINGS_API.BASE_URL,
-      url: '/v2/user',
-      method: 'GET',
-      qs: {
-        action: 'getdevice',
-        _ts: Date.now(), // Add timestamp to prevent caching
-      },
-      headers: {
-        'Accept': 'application/json',
-        ...CACHE_HEADERS,
-      },
-      // Add timeout to prevent hanging
-      timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
-    },
-  };
+    return requestOptions;
+  }
 }
