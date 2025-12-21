@@ -5,6 +5,7 @@ import {
   Icon,
   IHttpRequestOptions,
   IDataObject,
+  IAuthenticateGeneric,
 } from 'n8n-workflow';
 // Use Node.js built-in modules with type declarations
 import * as https from 'https';
@@ -205,8 +206,15 @@ export class WithingsOAuth2Api implements ICredentialType {
     includeScopes: true,
   };
 
-  // Use default OAuth2 authentication from n8n (inherited from oAuth2Api)
-  // The Bearer token is automatically added by n8n's OAuth2 implementation
+  // Define authentication - token is stored flat in oauthTokenData after extraction
+  authenticate: IAuthenticateGeneric = {
+    type: 'generic',
+    properties: {
+      headers: {
+        Authorization: '={{"Bearer " + $credentials.oauthTokenData.access_token}}',
+      },
+    },
+  };
 
   // Define a robust test request for credential validation
   test: ICredentialTestRequest = {
