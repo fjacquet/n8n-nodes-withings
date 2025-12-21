@@ -135,6 +135,16 @@ Most operations support the following parameters:
 
 ## Version History
 
+- 0.7.0: **Major refactoring for improved code quality and maintainability**
+  - Restructured codebase with better separation of concerns
+  - Reduced main node file from 1065 to 627 lines (-41%)
+  - Added comprehensive TypeScript interfaces and type safety
+  - Centralized all constants and configuration
+  - Extracted token refresh logic into reusable helper functions
+  - Added extensive JSDoc documentation throughout codebase
+  - Eliminated code duplication in validation and retry logic
+  - Improved error handling with proper n8n error types
+  - No breaking changes - all functionality maintained
 - 0.6.3: Fixed "Unable to sign without access token" error in sleep summary endpoint with enhanced token validation and special handling for sleep-related requests
 - 0.6.2: Fixed "This scope is not allowed" error by ensuring proper scope formatting with "user." prefix in authorization URL
 - 0.6.1: Version update for release
