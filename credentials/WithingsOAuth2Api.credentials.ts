@@ -81,6 +81,10 @@ export class WithingsOAuth2Api implements ICredentialType {
 
     // Pre-send modifications for token requests with signature and nonce
     preSend: async (requestOptions: IHttpRequestOptions, credentials: IDataObject) => {
+      console.log('=== WITHINGS DEBUG: preSend called ===');
+      console.log('Request URL:', requestOptions.url);
+      console.log('Credentials keys:', Object.keys(credentials));
+
       // Add action=requesttoken parameter to token request - required by Withings
       if (!requestOptions.body) {
         requestOptions.body = {};
@@ -89,6 +93,7 @@ export class WithingsOAuth2Api implements ICredentialType {
       // Use type assertion to tell TypeScript that body is an object with properties
       const bodyObj = requestOptions.body as Record<string, any>;
       bodyObj.action = 'requesttoken';
+      console.log('Body after adding action:', Object.keys(bodyObj));
 
       // Only format scope if it doesn't already have the user. prefix
       if (bodyObj.scope) {
@@ -175,7 +180,22 @@ export class WithingsOAuth2Api implements ICredentialType {
         }
       }
 
+      console.log('=== WITHINGS DEBUG: preSend completed ===');
       return requestOptions;
+    },
+
+    // Post-receive processing to log what we got back
+    postReceive: async (response: any) => {
+      console.log('=== WITHINGS DEBUG: Token Response Received ===');
+      console.log('Response keys:', Object.keys(response));
+      console.log('Response.body keys:', response.body ? Object.keys(response.body) : 'no body');
+      console.log('Response.body.access_token exists:', response.body?.access_token ? 'YES' : 'NO');
+      console.log('Response.body.access_token length:', response.body?.access_token?.length || 0);
+      console.log('Response.body.refresh_token exists:', response.body?.refresh_token ? 'YES' : 'NO');
+      console.log('Response.body.expires_in:', response.body?.expires_in);
+      console.log('Response status:', response.status);
+      console.log('===========================================');
+      return response;
     },
 
     // Enable automatic token refresh

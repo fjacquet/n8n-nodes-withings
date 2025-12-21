@@ -531,6 +531,22 @@ export class WithingsApi implements INodeType {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
 
+    // DEBUG: Log credential structure
+    try {
+      const credentials = await this.getCredentials('withingsOAuth2Api');
+      console.log('=== WITHINGS DEBUG: Credential Keys ===');
+      console.log('Available keys:', Object.keys(credentials));
+      console.log('Has oauthTokenData:', !!credentials.oauthTokenData);
+      if (credentials.oauthTokenData) {
+        console.log('oauthTokenData keys:', Object.keys(credentials.oauthTokenData as object));
+        console.log('oauthTokenData.access_token exists:', !!(credentials.oauthTokenData as any).access_token);
+        console.log('oauthTokenData.access_token length:', (credentials.oauthTokenData as any).access_token ? (credentials.oauthTokenData as any).access_token.length : 0);
+      }
+      console.log('=====================================');
+    } catch (debugError) {
+      console.error('DEBUG: Error inspecting credentials:', debugError);
+    }
+
     // For each item
     for (let i = 0; i < items.length; i++) {
       let resource = '';
