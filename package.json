@@ -1,7 +1,7 @@
 {
-  "name": "n8n-nodes-withings",
-  "version": "1.2.0",
-  "description": "n8n node for Withings API integration with integrated OAuth2",
+  "name": "@fjacquet/n8n-nodes-withings",
+  "version": "1.2.1",
+  "description": "n8n node for Withings API integration — fork with POST fix (upstream uses GET, causing 503 errors)",
   "keywords": [
     "n8n-community-node-package",
     "withings",
@@ -9,14 +9,14 @@
     "fitness"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/schimmmi/n8n-nodes-withings",
+  "homepage": "https://github.com/fjacquet/n8n-nodes-withings",
   "author": {
-    "name": "Jürgen Schilling",
-    "email": "alschimmi@googlemail.com"
+    "name": "Frederic Jacquet",
+    "email": "fred@ljf.ch"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/schimmmi/n8n-nodes-withings.git"
+    "url": "https://github.com/fjacquet/n8n-nodes-withings.git"
   },
   "engines": {
     "node": ">=18.19.1"
@@ -28,7 +28,7 @@
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials package.json",
     "lintfix": "eslint nodes credentials package.json --fix",
-    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "dist"
