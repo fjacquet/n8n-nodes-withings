@@ -1,6 +1,6 @@
 {
   "name": "@fjacquet/n8n-nodes-withings",
-  "version": "1.2.1",
+  "version": "1.4.0",
   "description": "n8n node for Withings API integration — fork with POST fix (upstream uses GET, causing 503 errors)",
   "keywords": [
     "n8n-community-node-package",

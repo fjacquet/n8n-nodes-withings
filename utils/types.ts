@@ -32,18 +32,6 @@ export interface ITokenRefreshResult {
 }
 
 /**
- * Request options with timestamp
- */
-export interface IRequestOptionsWithTimestamp {
-	method: string;
-	url: string;
-	qs: IDataObject & { _ts: number };
-	json: boolean;
-	headers: IDataObject;
-	timeout?: number;
-}
-
-/**
  * Validation attempt result
  */
 export interface IValidationAttemptResult {
@@ -72,21 +60,4 @@ export interface IFormattedResponse extends IDataObject {
 	error?: string;
 	status?: number;
 	errorCode?: string;
-}
-
-/**
- * Sleep validation options
- */
-export interface ISleepValidationOptions {
-	operation: string;
-	uniqueTimestamp: number;
-}
-
-/**
- * Jitter calculation result
- */
-export interface IJitterConfig {
-	min: number;
-	max: number;
-	value: number;
 }

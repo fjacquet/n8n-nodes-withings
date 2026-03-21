@@ -25,10 +25,6 @@ import {
   createRequestHeaders,
   createTokenErrorMessage,
 } from '../../utils/tokenHelpers';
-import {
-  refreshAccessToken,
-  isTokenExpired,
-} from '../../utils/oauth2Helper';
 import { IWithingsResponse, IRetryContext } from '../../utils/types';
 
 /**
@@ -75,36 +71,8 @@ async function executeWithRetry(
     tokenRefreshed: false,
   };
 
-  // If using manual token, skip OAuth2 validation
-  if (!manualToken) {
-    // Simplified token preparation - quick validation before actual request
-    // Withings tokens last 1 hour (3600 seconds) according to API response
-
-    // Quick single validation attempt instead of multiple attempts
-    try {
-      const uniqueTimestamp = generateUniqueTimestamp();
-      await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
-        method: 'POST',
-        url: `${WITHINGS_API.BASE_URL}${ENDPOINTS.USER}`,
-        body: `action=getdevice&_ts=${uniqueTimestamp}`,
-        json: true,
-        headers: {
-          ...createRequestHeaders(),
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Request-ID': `quick-validation-${uniqueTimestamp}`,
-        },
-        timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
-      });
-
-      retryContext.tokenRefreshed = true;
-      // Minimal delay after validation
-      await sleep(500);
-    } catch (validationError) {
-      // If quick validation fails, continue anyway - the retry logic will handle it
-      retryContext.tokenRefreshed = false;
-      await sleep(1000);
-    }
-  }
+  // Token validation removed — tokens are managed externally via Token Exchange workflow
+  // The retry logic below handles any transient failures
 
   // Create a fresh copy of the options for each attempt
   // Withings API requires POST with application/x-www-form-urlencoded body
@@ -149,10 +117,6 @@ async function executeWithRetry(
           const refreshResult = await refreshTokenForRetry(context, retryContext.retries);
           retryContext.tokenRefreshed = refreshResult.success;
         }
-      } else {
-        // Shorter initial delay to minimize time between token refresh and actual request
-        // Sleep endpoints are particularly sensitive to timing
-        await sleep(resource === 'sleep' ? 500 : TOKEN_CONFIG.INITIAL_DELAY);
       }
 
       // Create fresh options for this attempt
@@ -601,61 +565,26 @@ export class WithingsApi implements INodeType {
     let manualAccessToken: string | undefined;
 
     if (authenticationMethod === 'manual') {
-      // Get manual access token from parameter (from previous node)
-      manualAccessToken = this.getNodeParameter('manualAccessToken', 0) as string;
-      console.log('=== WITHINGS DEBUG: Using manual token ===');
-      console.log('Has manual token:', !!manualAccessToken);
+      // manualAccessToken is resolved per-item inside the loop below
     } else {
-      // Get credentials and check if token refresh is needed
+      // Validate credentials exist (token management is handled externally via Token Exchange workflow)
       const credentials = await this.getCredentials('withingsOAuth2Api');
-
-      console.log('=== WITHINGS DEBUG: Checking credentials ===');
-      console.log('Has accessToken:', !!credentials.accessToken);
-      console.log('Has refreshToken:', !!credentials.refreshToken);
-      console.log('ExpiresAt:', credentials.expiresAt);
-
-      // Check if token needs refresh
-      if (credentials.refreshToken && credentials.expiresAt) {
-        const needsRefresh = isTokenExpired(credentials.expiresAt as number);
-        console.log('Token needs refresh:', needsRefresh);
-
-        if (needsRefresh) {
-          console.log('=== Refreshing expired token ===');
-          try {
-            const tokenResponse = await refreshAccessToken(
-              this,
-              credentials.clientId as string,
-              credentials.clientSecret as string,
-              credentials.refreshToken as string,
-            );
-
-            if (tokenResponse.status === 0 && tokenResponse.body) {
-              console.log('Token refreshed successfully!');
-              console.log('NOTE: Please update your credentials with the new tokens:');
-              console.log('Access Token:', tokenResponse.body.access_token.substring(0, 20) + '...');
-              console.log('Refresh Token:', tokenResponse.body.refresh_token.substring(0, 20) + '...');
-              console.log('Expires At:', Math.floor(Date.now() / 1000) + tokenResponse.body.expires_in);
-
-              // For now, continue with old token and inform user to update credentials
-              // In a future version, we could try to update credentials automatically
-            } else {
-              console.error('Token refresh failed:', tokenResponse);
-              throw new NodeApiError(this.getNode(), { message: 'Token refresh failed. Please reconnect your Withings account.' } as any);
-            }
-          } catch (error) {
-            console.error('Error refreshing token:', error);
-            throw new NodeApiError(this.getNode(), error as any);
-          }
-        }
+      if (!credentials.accessToken) {
+        throw new NodeApiError(this.getNode(), {
+          message: 'No access token found. Use the Withings Token Exchange workflow to obtain tokens.',
+        } as any);
       }
     }
-
-    console.log('==========================================');
 
     // For each item
     for (let i = 0; i < items.length; i++) {
       let resource = '';
       let operation = '';
+
+      // Resolve manual access token per-item (supports expressions like ={{ $json.accessToken }})
+      if (authenticationMethod === 'manual') {
+        manualAccessToken = this.getNodeParameter('manualAccessToken', i) as string;
+      }
 
       try {
         resource = this.getNodeParameter('resource', i) as string;
@@ -667,12 +596,30 @@ export class WithingsApi implements INodeType {
         // Process common parameters
         const additionalFields = this.getNodeParameter('additionalFields', i, {}) as IDataObject;
 
+        // Determine endpoint and action based on resource and operation
+        endpoint = getEndpointForResource(resource, operation);
+        qs.action = operation;
+
+        // Activity and sleep endpoints use startdateymd/enddateymd (YYYY-MM-DD)
+        // Measure v1 endpoint uses startdate/enddate (Unix timestamps)
+        const usesYmdDates = resource === 'activity' || resource === 'sleep';
+
         if (additionalFields.startdate) {
-          qs.startdate = Math.floor(new Date(additionalFields.startdate as string).getTime() / 1000);
+          const dateObj = new Date(additionalFields.startdate as string);
+          if (usesYmdDates) {
+            qs.startdateymd = dateObj.toISOString().split('T')[0];
+          } else {
+            qs.startdate = Math.floor(dateObj.getTime() / 1000);
+          }
         }
 
         if (additionalFields.enddate) {
-          qs.enddate = Math.floor(new Date(additionalFields.enddate as string).getTime() / 1000);
+          const dateObj = new Date(additionalFields.enddate as string);
+          if (usesYmdDates) {
+            qs.enddateymd = dateObj.toISOString().split('T')[0];
+          } else {
+            qs.enddate = Math.floor(dateObj.getTime() / 1000);
+          }
         }
 
         if (additionalFields.lastupdate) {
@@ -682,10 +629,6 @@ export class WithingsApi implements INodeType {
         if (additionalFields.offset) {
           qs.offset = additionalFields.offset;
         }
-
-        // Determine endpoint and action based on resource and operation
-        endpoint = getEndpointForResource(resource, operation);
-        qs.action = operation;
 
         // Handle resource-specific parameters
         if (resource === 'measure' && operation === 'getmeas') {

@@ -92,12 +92,12 @@ export class WithingsOAuth2Api implements ICredentialType {
   test: ICredentialTestRequest = {
     request: {
       baseURL: WITHINGS_API.BASE_URL,
-      url: '/v2/user',
+      url: '/measure',
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: 'action=getdevice',
+      body: 'action=getmeas',
     },
   };
 }
