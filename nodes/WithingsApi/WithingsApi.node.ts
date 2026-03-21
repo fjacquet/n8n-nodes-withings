@@ -113,7 +113,7 @@ async function executeWithRetry(
     for (const [key, value] of Object.entries(baseQs)) {
       bodyParams.append(key, String(value));
     }
-    bodyParams.append('_ts', generateUniqueTimestamp());
+    bodyParams.append('_ts', String(generateUniqueTimestamp()));
 
     const options: IHttpRequestOptions = {
       method: 'POST',
