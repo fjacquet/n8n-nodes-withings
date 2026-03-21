@@ -88,11 +88,16 @@ export class WithingsOAuth2Api implements ICredentialType {
   };
 
   // Test the credentials by making a simple API call
+  // Withings API requires POST with form-urlencoded body
   test: ICredentialTestRequest = {
     request: {
       baseURL: WITHINGS_API.BASE_URL,
-      url: '/user?action=getdevice',
-      method: 'GET',
+      url: '/v2/user',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'action=getdevice',
     },
   };
 }

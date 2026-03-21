@@ -84,15 +84,13 @@ async function executeWithRetry(
     try {
       const uniqueTimestamp = generateUniqueTimestamp();
       await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
-        method: 'GET',
+        method: 'POST',
         url: `${WITHINGS_API.BASE_URL}${ENDPOINTS.USER}`,
-        qs: {
-          action: 'getdevice',
-          _ts: uniqueTimestamp,
-        },
+        body: `action=getdevice&_ts=${uniqueTimestamp}`,
         json: true,
         headers: {
           ...createRequestHeaders(),
+          'Content-Type': 'application/x-www-form-urlencoded',
           'X-Request-ID': `quick-validation-${uniqueTimestamp}`,
         },
         timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
@@ -109,18 +107,22 @@ async function executeWithRetry(
   }
 
   // Create a fresh copy of the options for each attempt
+  // Withings API requires POST with application/x-www-form-urlencoded body
   const createFreshOptions = (): IHttpRequestOptions => {
+    const bodyParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(baseQs)) {
+      bodyParams.append(key, String(value));
+    }
+    bodyParams.append('_ts', generateUniqueTimestamp());
+
     const options: IHttpRequestOptions = {
-      method: 'GET',
+      method: 'POST',
       url: `${WITHINGS_API.BASE_URL}${baseEndpoint}`,
-      qs: {
-        ...baseQs,
-        _ts: generateUniqueTimestamp(),
-      },
+      body: bodyParams.toString(),
       json: true,
       headers: {
         ...createRequestHeaders(),
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
         'X-Request-Attempt': `${retryContext.retries + 1}`,
       },
     };

@@ -81,15 +81,13 @@ export async function makeValidationRequest(
 		const uniqueTimestamp = generateUniqueTimestamp();
 
 		await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
-			method: 'GET',
+			method: 'POST',
 			url: endpoint.url,
-			qs: {
-				action: endpoint.action,
-				_ts: uniqueTimestamp,
-			},
+			body: `action=${endpoint.action}&_ts=${uniqueTimestamp}`,
 			json: true,
 			headers: {
 				...createRequestHeaders(),
+				'Content-Type': 'application/x-www-form-urlencoded',
 				'X-Request-ID': `validation-${uniqueTimestamp}`,
 			},
 			timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
@@ -195,14 +193,14 @@ export async function refreshTokenForRetry(
 		const uniqueTimestamp = generateUniqueTimestamp();
 
 		await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
-			method: 'GET',
+			method: 'POST',
 			url: endpoint.url,
-			qs: {
-				action: endpoint.action,
-				_ts: uniqueTimestamp,
-			},
+			body: `action=${endpoint.action}&_ts=${uniqueTimestamp}`,
 			json: true,
-			headers: createRequestHeaders(),
+			headers: {
+				...createRequestHeaders(),
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
 			timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
 		});
 
@@ -227,14 +225,14 @@ export async function executeRefreshStrategies(context: IExecuteFunctions): Prom
 			const uniqueTimestamp = generateUniqueTimestamp();
 
 			await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
-				method: 'GET',
+				method: 'POST',
 				url: strategy.url,
-				qs: {
-					action: strategy.action,
-					_ts: uniqueTimestamp,
-				},
+				body: `action=${strategy.action}&_ts=${uniqueTimestamp}`,
 				json: true,
-				headers: createRequestHeaders(),
+				headers: {
+					...createRequestHeaders(),
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
 				timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
 			});
 
@@ -263,15 +261,13 @@ export async function validateSleepToken(context: IExecuteFunctions, operation: 
 
 		// Use user endpoint for validation instead of sleep endpoint to avoid recursive errors
 		await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
-			method: 'GET',
+			method: 'POST',
 			url: VALIDATION_ENDPOINTS[0].url, // User endpoint instead of sleep
-			qs: {
-				action: 'getdevice', // Simple action that always works
-				_ts: uniqueTimestamp,
-			},
+			body: `action=getdevice&_ts=${uniqueTimestamp}`,
 			json: true,
 			headers: {
 				...createRequestHeaders(),
+				'Content-Type': 'application/x-www-form-urlencoded',
 				'X-Request-ID': `sleep-validation-${uniqueTimestamp}`,
 			},
 			timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
@@ -286,14 +282,14 @@ export async function validateSleepToken(context: IExecuteFunctions, operation: 
 			const uniqueTimestamp = generateUniqueTimestamp();
 
 			await context.helpers.requestWithAuthentication.call(context, 'withingsOAuth2Api', {
-				method: 'GET',
+				method: 'POST',
 				url: VALIDATION_ENDPOINTS[0].url,
-				qs: {
-					action: 'get', // Even simpler action
-					_ts: uniqueTimestamp,
-				},
+				body: `action=get&_ts=${uniqueTimestamp}`,
 				json: true,
-				headers: createRequestHeaders(),
+				headers: {
+					...createRequestHeaders(),
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
 				timeout: TOKEN_CONFIG.REQUEST_TIMEOUT,
 			});
 
