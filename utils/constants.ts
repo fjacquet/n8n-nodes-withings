@@ -59,7 +59,7 @@ export const CACHE_HEADERS = {
 /**
  * Default scopes for Withings OAuth2
  */
-export const DEFAULT_SCOPES = 'user.metrics,user.activity,user.sleepevents';
+export const DEFAULT_SCOPES = 'user.info,user.metrics,user.activity,user.sleepevents';
 
 /**
  * Token error patterns for detection
