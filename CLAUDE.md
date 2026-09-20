@@ -8,7 +8,7 @@ Guidance for Claude Code when working in this repository.
 npm test             # Vitest unit tests (tests/**/*.test.ts)
 npm run lint         # biome check . && n8n-node lint
 npm run format       # biome check --write .
-npm run typecheck    # tsc --noEmit
+npm run typecheck    # tsc -p tsconfig.typecheck.json (sources + tests)
 npm run build        # n8n-node build: rimraf dist, tsc, copy svg/png
 npm run dev          # n8n-node dev: local n8n container with this node loaded
 npm run release      # n8n-node release (release-it, needs npm login)

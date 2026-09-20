@@ -35,6 +35,19 @@ describe('buildRequestParams', () => {
 		expect(form).toEqual({ action: 'getsummary', startdateymd: '2024-03-01' });
 	});
 
+	it('keeps the calendar day the user picked when the date carries a timezone offset', () => {
+		const { form } = buildRequestParams('activity', 'getactivity', {
+			startdate: '2024-03-01T23:00:00-05:00',
+			enddate: '2024-03-02T00:30:00+02:00',
+		});
+
+		expect(form).toEqual({
+			action: 'getactivity',
+			startdateymd: '2024-03-01',
+			enddateymd: '2024-03-02',
+		});
+	});
+
 	it('routes measure getmeas to the v1 endpoint with unix-second dates', () => {
 		const { endpoint, form } = buildRequestParams('measure', 'getmeas', {
 			startdate: start,

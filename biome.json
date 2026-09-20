@@ -6,7 +6,16 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["credentials/**", "nodes/**", "utils/**", "tests/**", "*.json", "*.ts", "!dist"]
+    "includes": [
+      "credentials/**",
+      "nodes/**",
+      "utils/**",
+      "tests/**",
+      "*.json",
+      "*.ts",
+      "*.mts",
+      "!dist"
+    ]
   },
   "formatter": {
     "enabled": true,

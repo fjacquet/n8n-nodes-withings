@@ -16,7 +16,9 @@ import type {
 
 const unixSeconds = (iso: string): string => String(Math.floor(Date.parse(iso) / 1000));
 
-const calendarDay = (iso: string): string => new Date(iso).toISOString().slice(0, 10);
+/** Keep the calendar day the user wrote (with its own offset); fall back to the UTC day. */
+const calendarDay = (iso: string): string =>
+	/^\d{4}-\d{2}-\d{2}/.exec(iso)?.[0] ?? new Date(iso).toISOString().slice(0, 10);
 
 const usesCalendarDays = (resource: Resource): boolean =>
 	resource === 'activity' || resource === 'sleep';

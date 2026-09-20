@@ -114,7 +114,7 @@ Version 2 is a breaking change.
 npm install
 npm test            # vitest
 npm run lint        # biome + n8n-node lint
-npm run typecheck   # tsc --noEmit
+npm run typecheck   # tsc, sources and tests
 npm run build       # n8n-node build → dist/
 npm run dev         # local n8n with this node loaded (needs Docker or Podman)
 ```
