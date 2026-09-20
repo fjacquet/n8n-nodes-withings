@@ -7,7 +7,7 @@ import type {
 	INodeProperties,
 } from 'n8n-workflow';
 import { WITHINGS } from '../utils/constants';
-import { normalizeTokenData } from '../utils/oauth';
+import { normalizeTokenData, tokenResponseError } from '../utils/oauth';
 
 export class WithingsOAuth2Api implements ICredentialType {
 	name = 'withingsOAuth2Api';
@@ -68,6 +68,8 @@ export class WithingsOAuth2Api implements ICredentialType {
 	 * Withings nests the tokens under `body`; n8n expects them at the top level. Pure transform.
 	 */
 	async preAuthentication(credentials: ICredentialDataDecryptedObject): Promise<IDataObject> {
+		const failure = tokenResponseError(credentials.oauthTokenData);
+		if (failure) throw new Error(failure);
 		const oauthTokenData = normalizeTokenData(credentials.oauthTokenData);
 		return oauthTokenData ? { oauthTokenData } : {};
 	}
@@ -88,6 +90,23 @@ export class WithingsOAuth2Api implements ICredentialType {
 					value: 401,
 					message:
 						'Withings rejected the stored access token. Reconnect the credential. Tokens refresh automatically when a workflow runs, but not during this test.',
+				},
+			},
+			{
+				type: 'responseSuccessBody',
+				properties: {
+					key: 'status',
+					value: 503,
+					message:
+						'Withings rejected the request: invalid client ID or secret, or the user.info scope is missing.',
+				},
+			},
+			{
+				type: 'responseSuccessBody',
+				properties: {
+					key: 'status',
+					value: 601,
+					message: 'Withings rate limit reached. Try again in a minute.',
 				},
 			},
 		],

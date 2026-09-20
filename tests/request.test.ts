@@ -67,6 +67,21 @@ describe('buildRequestParams', () => {
 		expect(form).toEqual({ action: 'getintradayactivity', startdate: startUnix });
 	});
 
+	it('sends unix seconds for sleep get and calendar days for measure getactivity', () => {
+		expect(buildRequestParams('sleep', 'get', { startdate: start }).form).toEqual({
+			action: 'get',
+			startdate: startUnix,
+		});
+		expect(buildRequestParams('measure', 'getactivity', { startdate: start }).form).toEqual({
+			action: 'getactivity',
+			startdateymd: '2024-03-01',
+		});
+		expect(buildRequestParams('activity', 'getworkouts', { enddate: end }).form).toEqual({
+			action: 'getworkouts',
+			enddateymd: '2024-03-07',
+		});
+	});
+
 	it('encodes lastupdate as unix seconds for every resource', () => {
 		expect(
 			buildRequestParams('activity', 'getactivity', { lastupdate: start }).form.lastupdate,

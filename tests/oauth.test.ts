@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeTokenData } from '../utils/oauth';
+import { isTokenFresh, normalizeTokenData } from '../utils/oauth';
 
 const rawTokenResponse = {
 	status: 0,
@@ -78,5 +78,20 @@ describe('normalizeTokenData', () => {
 
 		expect(result).not.toBe(frozen);
 		expect(frozen).toEqual(rawTokenResponse);
+	});
+});
+
+describe('isTokenFresh', () => {
+	const now = 1_700_000_000_000;
+
+	it('is fresh while more than a minute remains before n8n_expires_at', () => {
+		expect(isTokenFresh(String(now + 5 * 60_000), now)).toBe(true);
+	});
+
+	it('is stale inside the last minute, after expiry, or when the expiry is unknown', () => {
+		expect(isTokenFresh(String(now + 30_000), now)).toBe(false);
+		expect(isTokenFresh(String(now - 1), now)).toBe(false);
+		expect(isTokenFresh(undefined, now)).toBe(false);
+		expect(isTokenFresh('not-a-number', now)).toBe(false);
 	});
 });

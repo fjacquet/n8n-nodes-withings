@@ -29,12 +29,13 @@ Requires Node >= 24 (n8n 2.x requirement). Package targets n8n >= 2.40.
 
 ## Why the node uses the deprecated `requestWithAuthentication`
 
-Withings returns HTTP 200 for everything and reports errors in `body.status`. n8n only refreshes OAuth2 tokens on an HTTP status match. The node therefore passes `oauth2: { property: 'body.access_token', tokenExpiredStatusCode: 200, skipRefreshWhileTokenIsFresh: true }`, which makes n8n refresh exactly when the stored `n8n_expires_at` has passed (or is unknown). Only the legacy helper with `resolveWithFullResponse: true, simple: false` re-evaluates a resolved 200 response; `httpRequestWithAuthentication` checks only in its error path. `property` is mandatory: without it n8n compares an undefined stored token and signs with `undefined`. Do not "modernize" this call; the one `eslint-disable-next-line` is intentional.
+Withings returns HTTP 200 for everything and reports errors in `body.status`. n8n only refreshes OAuth2 tokens on an HTTP status match. The node therefore reads `oauthTokenData.n8n_expires_at` itself (`isTokenFresh`) and passes `oauth2: { property: 'body.access_token', tokenExpiredStatusCode: fresh ? 401 : 200 }`: while fresh nothing triggers, once stale (or unknown) every 200 triggers one refresh + retry. Doing the freshness check in the node (instead of n8n's `skipRefreshWhileTokenIsFresh`) keeps older n8n versions from refreshing on every call. Only the legacy helper with `resolveWithFullResponse: true, simple: false` re-evaluates a resolved 200 response; `httpRequestWithAuthentication` checks only in its error path. `property` is mandatory: without it n8n compares an undefined stored token and signs with `undefined`. Do not "modernize" this call; the one `eslint-disable-next-line` is intentional.
 
 ## Key patterns
 
 - All Withings calls are POST with a form body; the `action` form field is the operation name.
-- Activity/sleep use `startdateymd`/`enddateymd` (YYYY-MM-DD); measure uses `startdate`/`enddate` (Unix seconds); `lastupdate` is Unix seconds everywhere. `measure` + `getmeas` hits `/measure` (v1); everything else is v2.
+- Date encoding is per operation (`UNIX_DATE_OPERATIONS` in utils/request.ts): `measure:getmeas`, `measure:getintradayactivity` and `sleep:get` take Unix-second `startdate`/`enddate`; every other operation takes `startdateymd`/`enddateymd` (the YYYY-MM-DD prefix of the picked value, offset preserved). `lastupdate` is Unix seconds everywhere. `measure` + `getmeas` hits `/measure` (v1); everything else is v2.
+- `preAuthentication` throws when the stored token data carries a non-zero Withings `status`, so a failed refresh is never persisted.
 - No custom retry logic; users rely on n8n's Retry On Fail / Continue On Fail.
 - No `console.*` (Biome and n8n lint both forbid it).
 

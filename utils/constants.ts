@@ -30,5 +30,4 @@ export const RESOURCE_ENDPOINTS: Readonly<Record<Resource, string>> = {
 export const WITHINGS_STATUS = {
 	OK: 0,
 	INVALID_TOKEN: 401,
-	INVALID_CLIENT: 503,
 } as const;

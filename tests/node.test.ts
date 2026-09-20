@@ -16,12 +16,22 @@ interface FakeContextOptions {
 	readonly parameters: Record<string, unknown>;
 	readonly response: unknown;
 	readonly continueOnFail?: boolean;
+	readonly expiresAt?: string;
 }
 
-const fakeContext = ({ parameters, response, continueOnFail = false }: FakeContextOptions) => {
+const fakeContext = ({
+	parameters,
+	response,
+	continueOnFail = false,
+	expiresAt,
+}: FakeContextOptions) => {
 	const requestWithAuthentication = vi.fn().mockResolvedValue(response);
 	const context = {
 		getInputData: () => [{ json: {} }],
+		getCredentials: vi.fn().mockResolvedValue({
+			oauthTokenData:
+				expiresAt === undefined ? { status: 0 } : { status: 0, n8n_expires_at: expiresAt },
+		}),
 		getNodeParameter: (name: string, _index: number, fallback?: unknown) =>
 			name in parameters ? parameters[name] : fallback,
 		getNode: () => node,
@@ -59,13 +69,34 @@ describe('WithingsApi.execute', () => {
 			simple: false,
 		});
 		expect(authOptions).toEqual({
-			oauth2: {
-				property: 'body.access_token',
-				tokenExpiredStatusCode: 200,
-				skipRefreshWhileTokenIsFresh: true,
-			},
+			oauth2: { property: 'body.access_token', tokenExpiredStatusCode: 200 },
 		});
 		expect(output).toEqual([[{ json: { measuregrps: [{ grpid: 1 }] }, pairedItem: { item: 0 } }]]);
+	});
+
+	it('does not ask n8n to refresh while the stored token is fresh', async () => {
+		const { context, requestWithAuthentication } = fakeContext({
+			parameters: { resource: 'user', operation: 'getdevice' },
+			response: okResponse,
+			expiresAt: String(Date.now() + 60 * 60_000),
+		});
+
+		await new WithingsApi().execute.call(context);
+
+		expect(requestWithAuthentication.mock.calls[0][2]).toEqual({
+			oauth2: { property: 'body.access_token', tokenExpiredStatusCode: 401 },
+		});
+	});
+
+	it('reports a non-2xx HTTP response even when the body is empty', async () => {
+		const { context } = fakeContext({
+			parameters: { resource: 'user', operation: 'getdevice' },
+			response: { statusCode: 502, body: undefined },
+		});
+
+		await expect(new WithingsApi().execute.call(context)).rejects.toMatchObject({
+			message: expect.stringContaining('HTTP 502'),
+		});
 	});
 
 	it('throws a NodeApiError when Withings rejects the token', async () => {

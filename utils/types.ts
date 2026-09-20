@@ -48,5 +48,5 @@ export type WithingsResult = WithingsSuccess | WithingsFailure;
 export interface NodeErrorOptions {
 	readonly message: string;
 	readonly description: string;
-	readonly httpCode: string;
+	readonly httpCode?: string;
 }

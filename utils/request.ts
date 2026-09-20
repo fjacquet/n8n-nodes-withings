@@ -1,6 +1,7 @@
-import type { IDataObject, INode, JsonObject } from 'n8n-workflow';
+import type { INode, JsonObject } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import { ENDPOINTS, RESOURCE_ENDPOINTS, WITHINGS_STATUS } from './constants';
+import { isRecord } from './oauth';
 import type {
 	AdditionalFields,
 	FailureReason,
@@ -20,17 +21,25 @@ const unixSeconds = (iso: string): string => String(Math.floor(Date.parse(iso) /
 const calendarDay = (iso: string): string =>
 	/^\d{4}-\d{2}-\d{2}/.exec(iso)?.[0] ?? new Date(iso).toISOString().slice(0, 10);
 
-const usesCalendarDays = (resource: Resource): boolean =>
-	resource === 'activity' || resource === 'sleep';
+/** Withings operations that take Unix-second `startdate`/`enddate`; all others take `*ymd` days. */
+const UNIX_DATE_OPERATIONS: ReadonlySet<string> = new Set([
+	'measure:getmeas',
+	'measure:getintradayactivity',
+	'sleep:get',
+]);
+
+const usesCalendarDays = (resource: Resource, operation: string): boolean =>
+	!UNIX_DATE_OPERATIONS.has(`${resource}:${operation}`);
 
 const endpointFor = (resource: Resource, operation: string): string =>
 	resource === 'measure' && operation === 'getmeas'
 		? ENDPOINTS.MEASURE_V1
 		: RESOURCE_ENDPOINTS[resource];
 
-const dateFields = (resource: Resource, fields: AdditionalFields): Form => {
-	const encode = usesCalendarDays(resource) ? calendarDay : unixSeconds;
-	const suffix = usesCalendarDays(resource) ? 'ymd' : '';
+const dateFields = (resource: Resource, operation: string, fields: AdditionalFields): Form => {
+	const calendar = usesCalendarDays(resource, operation);
+	const encode = calendar ? calendarDay : unixSeconds;
+	const suffix = calendar ? 'ymd' : '';
 	return {
 		...(fields.startdate && { [`startdate${suffix}`]: encode(fields.startdate) }),
 		...(fields.enddate && { [`enddate${suffix}`]: encode(fields.enddate) }),
@@ -50,7 +59,7 @@ export const buildRequestParams = (
 	endpoint: endpointFor(resource, operation),
 	form: {
 		action: operation,
-		...dateFields(resource, fields),
+		...dateFields(resource, operation, fields),
 		...(fields.lastupdate && { lastupdate: unixSeconds(fields.lastupdate) }),
 		...(fields.offset && { offset: String(fields.offset) }),
 		...(resource === 'measure' &&
@@ -59,9 +68,6 @@ export const buildRequestParams = (
 		...(resource === 'sleep' && operation === 'get' && listField('data_fields', extras.dataFields)),
 	},
 });
-
-const isRecord = (value: unknown): value is IDataObject =>
-	typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const failure = (reason: FailureReason, status: number, message: string): WithingsFailure => ({
 	ok: false,
@@ -99,11 +105,18 @@ const HINTS: Readonly<Record<FailureReason, string>> = {
 	api: 'Check the operation parameters and the Withings status code reference at https://developer.withings.com/api-reference/#section/Response-status',
 };
 
+/** Only a real HTTP status goes into `httpCode`; Withings' own codes would mislead n8n's hints. */
 export const describeWithingsError = (error: WithingsFailure): NodeErrorOptions => ({
 	message: error.message,
 	description: HINTS[error.reason],
-	httpCode: String(error.status),
+	...(error.reason === 'http' && { httpCode: String(error.status) }),
 });
+
+/** Body for NodeApiError: n8n dereferences it, so never hand it a non-object. */
+export const errorPayload = ({ statusCode, body }: FullResponse): JsonObject =>
+	isRecord(body)
+		? (body as JsonObject)
+		: { statusCode, body: body === undefined ? '' : String(body) };
 
 export const errorMessage = (error: unknown): string =>
 	error instanceof Error ? error.message : String(error);

@@ -48,6 +48,14 @@ describe('WithingsOAuth2Api credential', () => {
 		expect(result).toEqual({ oauthTokenData: normalizeTokenData(rawTokenData) });
 	});
 
+	it('throws a clear error when Withings answered the token request with an error', async () => {
+		const failed = { status: 503, body: {}, error: 'Invalid Params: invalid refresh_token' };
+
+		await expect(credential.preAuthentication({ oauthTokenData: failed })).rejects.toThrow(
+			/invalid refresh_token/,
+		);
+	});
+
 	it('returns an empty patch when there is no token data yet', async () => {
 		await expect(credential.preAuthentication({})).resolves.toEqual({});
 	});
@@ -59,9 +67,7 @@ describe('WithingsOAuth2Api credential', () => {
 			method: 'POST',
 			body: 'action=getdevice',
 		});
-		expect(credential.test.rules?.[0]).toMatchObject({
-			type: 'responseSuccessBody',
-			properties: { key: 'status', value: 401 },
-		});
+		const flagged = credential.test.rules?.map((rule) => rule.properties.value);
+		expect(flagged).toEqual(expect.arrayContaining([401, 503, 601]));
 	});
 });

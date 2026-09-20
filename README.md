@@ -65,9 +65,13 @@ Add the **Withings** node, pick the credential, then a resource and an operation
 |---|---|---|---|
 | Activity | Get Activity, Get Summary, Get Workouts | `POST /v2/measure` | `startdateymd`, `enddateymd` (calendar day, `YYYY-MM-DD`) |
 | Measure | Get Measurements | `POST /measure` | `startdate`, `enddate` (Unix seconds) |
-| Measure | Get Activity, Get Intraday Activity | `POST /v2/measure` | `startdate`, `enddate` (Unix seconds) |
-| Sleep | Get, Get Summary | `POST /v2/sleep` | `startdateymd`, `enddateymd` (calendar day) |
+| Measure | Get Activity | `POST /v2/measure` | `startdateymd`, `enddateymd` (calendar day) |
+| Measure | Get Intraday Activity | `POST /v2/measure` | `startdate`, `enddate` (Unix seconds) |
+| Sleep | Get | `POST /v2/sleep` | `startdate`, `enddate` (Unix seconds) |
+| Sleep | Get Summary | `POST /v2/sleep` | `startdateymd`, `enddateymd` (calendar day) |
 | User | Get, Get Device, Get Goals | `POST /v2/user` | none |
+
+Calendar-day values keep the day you picked in the date picker, whatever timezone offset the value carries.
 
 Additional fields:
 
@@ -83,7 +87,7 @@ The node can be used as a tool by AI Agent nodes.
 
 ## How token refresh works
 
-Withings access tokens live three hours and every refresh rotates the refresh token. This package tells n8n to refresh whenever the stored expiry has passed, before sending the request, and n8n serialises refreshes across workers so the rotated refresh token is never lost. The first run after connecting always refreshes once (n8n has no expiry for the freshly connected token yet); after that, roughly once every three hours of use.
+Withings access tokens live three hours and every refresh rotates the refresh token. Before each request the node checks the expiry n8n stored for the token; once it is within a minute of expiring (or unknown), the node tells n8n to refresh first. n8n serialises refreshes across workers so the rotated refresh token is never lost. A refresh that Withings rejects is surfaced as an error instead of being stored. The first run after connecting always refreshes once (n8n has no expiry for the freshly connected token yet); after that, roughly once every three hours of use.
 
 Because Withings reports errors in the JSON body rather than in the HTTP status, the node uses n8n's legacy request helper, which is the only one able to evaluate a `200` response for refresh purposes. This is deliberate and documented in the source.
 

@@ -5,6 +5,7 @@ import {
 	asNodeError,
 	describeWithingsError,
 	errorMessage,
+	errorPayload,
 	parseWithingsResponse,
 } from '../utils/request';
 
@@ -81,9 +82,17 @@ describe('describeWithingsError', () => {
 			message: 'Withings rejected the access token. Reconnect the credential.',
 		});
 
-		expect(options.httpCode).toBe('401');
+		expect(options.httpCode).toBeUndefined();
 		expect(options.message).toMatch(/rejected/);
 		expect(options.description).toMatch(/reconnect/i);
+	});
+
+	it('only reports a real HTTP status as httpCode', () => {
+		const http = describeWithingsError({ ok: false, reason: 'http', status: 502, message: 'm' });
+		const api = describeWithingsError({ ok: false, reason: 'api', status: 503, message: 'm' });
+
+		expect(http.httpCode).toBe('502');
+		expect(api.httpCode).toBeUndefined();
 	});
 
 	it('gives a distinct hint per failure reason', () => {
@@ -118,5 +127,19 @@ describe('errorMessage', () => {
 		expect(errorMessage(new Error('nope'))).toBe('nope');
 		expect(errorMessage('plain')).toBe('plain');
 		expect(errorMessage(42)).toBe('42');
+	});
+});
+
+describe('errorPayload', () => {
+	it('passes an object body through and wraps anything else', () => {
+		expect(errorPayload({ statusCode: 200, body: { status: 503 } })).toEqual({ status: 503 });
+		expect(errorPayload({ statusCode: 502, body: undefined })).toEqual({
+			statusCode: 502,
+			body: '',
+		});
+		expect(errorPayload({ statusCode: 502, body: '<html>' })).toEqual({
+			statusCode: 502,
+			body: '<html>',
+		});
 	});
 });

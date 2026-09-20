@@ -1,17 +1,19 @@
 import type {
+	IDataObject,
 	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
-	JsonObject,
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
 import { WITHINGS } from '../../utils/constants';
+import { isTokenFresh } from '../../utils/oauth';
 import {
 	asNodeError,
 	buildRequestParams,
 	describeWithingsError,
 	errorMessage,
+	errorPayload,
 	parseWithingsResponse,
 } from '../../utils/request';
 import type { AdditionalFields, FullResponse, Resource } from '../../utils/types';
@@ -50,12 +52,15 @@ export class WithingsApi implements INodeType {
 					},
 				);
 
-				// Withings answers HTTP 200 even for an expired token (the error lives in body.status).
-				// n8n only refreshes on an HTTP status match. With tokenExpiredStatusCode 200 plus
-				// skipRefreshWhileTokenIsFresh it refreshes exactly when the stored n8n_expires_at has
-				// passed (or is unknown), under n8n's cross-process lock, then retries. Only the legacy
-				// helper evaluates a *resolved* response (resolveWithFullResponse + simple:false), so the
-				// deprecated helper is used on purpose here.
+				// Withings answers HTTP 200 even for an expired token (the error lives in body.status), and
+				// n8n only refreshes on an HTTP status match. So: while the stored token is fresh, ask for
+				// the normal 401 trigger (never fires); once it is stale or unknown, declare 200 the
+				// "expired" status so n8n refreshes under its cross-process lock and retries. Only the
+				// legacy helper evaluates a *resolved* response (resolveWithFullResponse + simple:false),
+				// which is why the deprecated helper is used on purpose here.
+				const credentials = await this.getCredentials('withingsOAuth2Api', i);
+				const tokenData = credentials.oauthTokenData as IDataObject | undefined;
+				const fresh = isTokenFresh(tokenData?.n8n_expires_at, Date.now());
 				// eslint-disable-next-line @n8n/community-nodes/no-deprecated-workflow-functions
 				const response = (await this.helpers.requestWithAuthentication.call(
 					this,
@@ -72,8 +77,7 @@ export class WithingsApi implements INodeType {
 					{
 						oauth2: {
 							property: 'body.access_token',
-							tokenExpiredStatusCode: 200,
-							skipRefreshWhileTokenIsFresh: true,
+							tokenExpiredStatusCode: fresh ? 401 : 200,
 						},
 					},
 				)) as FullResponse;
@@ -82,7 +86,7 @@ export class WithingsApi implements INodeType {
 				if (!result.ok) {
 					throw new NodeApiError(
 						this.getNode(),
-						response.body as JsonObject,
+						errorPayload(response),
 						describeWithingsError(result),
 					);
 				}
