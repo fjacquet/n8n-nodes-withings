@@ -1,103 +1,95 @@
-import {
-  IAuthenticateGeneric,
-  ICredentialTestRequest,
-  ICredentialType,
-  INodeProperties,
-  Icon,
+import type {
+	ICredentialDataDecryptedObject,
+	ICredentialTestRequest,
+	ICredentialType,
+	Icon,
+	IDataObject,
+	INodeProperties,
 } from 'n8n-workflow';
-
-import {
-  WITHINGS_API,
-  DEFAULT_SCOPES,
-} from '../utils/constants';
+import { WITHINGS } from '../utils/constants';
+import { normalizeTokenData } from '../utils/oauth';
 
 export class WithingsOAuth2Api implements ICredentialType {
-  name = 'withingsOAuth2Api';
-  displayName = 'Withings OAuth2 API';
-  description = 'OAuth2 authentication for Withings API';
-  documentationUrl = 'https://developer.withings.com/api-reference/#section/Authentication';
-  icon: Icon = 'file:../nodes/WithingsApi/withings.svg';
+	name = 'withingsOAuth2Api';
 
-  properties: INodeProperties[] = [
-    {
-      displayName: 'Client ID',
-      name: 'clientId',
-      type: 'string',
-      required: true,
-      default: '',
-      description: 'The Client ID from your Withings Developer Account',
-    },
-    {
-      displayName: 'Client Secret',
-      name: 'clientSecret',
-      type: 'string',
-      typeOptions: {
-        password: true,
-      },
-      required: true,
-      default: '',
-      description: 'The Client Secret from your Withings Developer Account',
-    },
-    {
-      displayName: 'Access Token',
-      name: 'accessToken',
-      type: 'string',
-      typeOptions: {
-        password: true,
-      },
-      required: false,
-      default: '',
-      description: 'Access token (will be automatically filled by Token Exchange node)',
-    },
-    {
-      displayName: 'Refresh Token',
-      name: 'refreshToken',
-      type: 'string',
-      typeOptions: {
-        password: true,
-      },
-      required: false,
-      default: '',
-      description: 'Refresh token (will be automatically filled by Token Exchange node)',
-    },
-    {
-      displayName: 'Expires At',
-      name: 'expiresAt',
-      type: 'number',
-      required: false,
-      default: 0,
-      description: 'Unix timestamp when the token expires',
-    },
-    {
-      displayName: 'Scope',
-      name: 'scope',
-      type: 'string',
-      default: DEFAULT_SCOPES,
-      description: 'Comma-separated list of scopes. Common scopes: user.info, user.metrics, user.activity, user.sleepevents',
-    },
-  ];
+	extends = ['oAuth2Api'];
 
-  // Use generic authentication with Bearer token
-  authenticate: IAuthenticateGeneric = {
-    type: 'generic',
-    properties: {
-      headers: {
-        Authorization: '=Bearer {{$credentials.accessToken}}',
-      },
-    },
-  };
+	displayName = 'Withings OAuth2 API';
 
-  // Test the credentials by making a simple API call
-  // Withings API requires POST with form-urlencoded body
-  test: ICredentialTestRequest = {
-    request: {
-      baseURL: WITHINGS_API.BASE_URL,
-      url: '/measure',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'action=getmeas',
-    },
-  };
+	documentationUrl = 'https://developer.withings.com/api-reference/#section/Authentication';
+
+	icon: Icon = 'file:../nodes/WithingsApi/withings.svg';
+
+	properties: INodeProperties[] = [
+		{
+			displayName: 'Grant Type',
+			name: 'grantType',
+			type: 'hidden',
+			default: 'authorizationCode',
+		},
+		{
+			displayName: 'Authorization URL',
+			name: 'authUrl',
+			type: 'hidden',
+			default: WITHINGS.AUTH_URL,
+			required: true,
+		},
+		{
+			displayName: 'Access Token URL',
+			name: 'accessTokenUrl',
+			type: 'hidden',
+			default: WITHINGS.TOKEN_URL,
+			required: true,
+		},
+		{
+			displayName: 'Scope',
+			name: 'scope',
+			type: 'string',
+			default: WITHINGS.DEFAULT_SCOPES,
+			description:
+				'Comma-separated Withings scopes. The user.info scope is required for the User resource.',
+		},
+		{
+			displayName: 'Auth URI Query Parameters',
+			name: 'authQueryParameters',
+			type: 'hidden',
+			default: '',
+		},
+		{
+			displayName: 'Authentication',
+			name: 'authentication',
+			type: 'hidden',
+			default: 'body',
+		},
+	];
+
+	/**
+	 * n8n calls this before every request (in memory) and after every token refresh (persisted).
+	 * Withings nests the tokens under `body`; n8n expects them at the top level. Pure transform.
+	 */
+	async preAuthentication(credentials: ICredentialDataDecryptedObject): Promise<IDataObject> {
+		const oauthTokenData = normalizeTokenData(credentials.oauthTokenData);
+		return oauthTokenData ? { oauthTokenData } : {};
+	}
+
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: WITHINGS.BASE_URL,
+			url: '/v2/user',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: 'action=getdevice',
+		},
+		rules: [
+			{
+				type: 'responseSuccessBody',
+				properties: {
+					key: 'status',
+					value: 401,
+					message:
+						'Withings rejected the stored access token. Reconnect the credential. Tokens refresh automatically when a workflow runs, but not during this test.',
+				},
+			},
+		],
+	};
 }

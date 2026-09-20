@@ -1,19 +1,17 @@
-/**
- * Constants and configuration for Withings API integration
- */
+import type { Resource } from './types';
 
-/**
- * Withings API URLs
- */
-export const WITHINGS_API = {
+export const WITHINGS = {
 	BASE_URL: 'https://wbsapi.withings.net',
 	AUTH_URL: 'https://account.withings.com/oauth2_user/authorize2',
-	TOKEN_URL: 'https://wbsapi.withings.net/v2/oauth2',
+	/**
+	 * Withings requires `action=requesttoken` on every token request. n8n's OAuth2 client only
+	 * injects extra body fields for the client-credentials grant, but Withings also reads the
+	 * parameter from the query string, so it lives in the URL.
+	 */
+	TOKEN_URL: 'https://wbsapi.withings.net/v2/oauth2?action=requesttoken',
+	DEFAULT_SCOPES: 'user.info,user.metrics,user.activity,user.sleepevents',
 } as const;
 
-/**
- * API Endpoints
- */
 export const ENDPOINTS = {
 	USER: '/v2/user',
 	MEASURE: '/v2/measure',
@@ -21,88 +19,17 @@ export const ENDPOINTS = {
 	SLEEP: '/v2/sleep',
 } as const;
 
-/**
- * Token refresh configuration
- */
-export const TOKEN_CONFIG = {
-	/** Maximum number of retry attempts for failed requests */
-	MAX_RETRIES: 5,
-	/** Base delay in milliseconds for exponential backoff */
-	BASE_DELAY: 1000,
-	/** Delay after successful token refresh (ms) */
-	TOKEN_REFRESH_DELAY: 2000,
-	/** Request timeout in milliseconds */
-	REQUEST_TIMEOUT: 10000,
+export const RESOURCE_ENDPOINTS: Readonly<Record<Resource, string>> = {
+	activity: ENDPOINTS.MEASURE,
+	measure: ENDPOINTS.MEASURE,
+	sleep: ENDPOINTS.SLEEP,
+	user: ENDPOINTS.USER,
+};
+
+/** Withings reports errors in the JSON body `status` field; the HTTP status is always 200. */
+export const WITHINGS_STATUS = {
+	OK: 0,
+	INVALID_TOKEN: 401,
+	INVALID_CLIENT: 503,
+	NOT_IMPLEMENTED: 2554,
 } as const;
-
-/**
- * Jitter configuration for randomized delays
- */
-export const JITTER = {
-	/** Minimum jitter multiplier */
-	MIN: 0.8,
-	/** Maximum jitter multiplier */
-	MAX: 1.2,
-	/** Range for jitter calculation */
-	RANGE: 0.4,
-} as const;
-
-/**
- * Default cache prevention headers
- */
-export const CACHE_HEADERS = {
-	'Cache-Control': 'no-cache, no-store, must-revalidate',
-	'Pragma': 'no-cache',
-	'Expires': '0',
-} as const;
-
-/**
- * Default scopes for Withings OAuth2
- */
-export const DEFAULT_SCOPES = 'user.info,user.metrics,user.activity,user.sleepevents';
-
-/**
- * Token error patterns for detection
- */
-export const TOKEN_ERROR_PATTERNS = [
-	'token',
-	'sign',
-	'auth',
-	'unauthorized',
-	'expired',
-	'authentication',
-	'credentials',
-	'access',
-	'permission',
-	'invalid',
-	'oauth',
-	'401',
-	'403',
-	'denied',
-	'reject',
-	'login',
-	'signature',
-	'identity',
-	'verify',
-	'key',
-	'secret',
-] as const;
-
-/**
- * Refresh strategies with different endpoints and wait times
- */
-export const REFRESH_STRATEGIES = [
-	{
-		url: `${WITHINGS_API.BASE_URL}${ENDPOINTS.MEASURE_V1}`,
-		action: 'getmeas',
-		waitTime: 1200,
-		description: 'Measure v1 endpoint (works without date params)',
-	},
-] as const;
-
-/**
- * Retry endpoints for the main request cycle
- */
-export const RETRY_ENDPOINTS = [
-	{ url: `${WITHINGS_API.BASE_URL}${ENDPOINTS.MEASURE_V1}`, action: 'getmeas' },
-] as const;
