@@ -1,63 +1,52 @@
-/**
- * Type definitions for Withings API integration
- */
+import type { IDataObject } from 'n8n-workflow';
 
-import { IDataObject } from 'n8n-workflow';
+export type Resource = 'activity' | 'measure' | 'sleep' | 'user';
 
-/**
- * Withings API response structure
- */
-export interface IWithingsResponse {
-	status: number;
-	body?: IDataObject;
-	error?: string;
+/** Values of the node's "Additional Fields" collection. Dates arrive as ISO strings. */
+export interface AdditionalFields {
+	readonly startdate?: string;
+	readonly enddate?: string;
+	readonly lastupdate?: string;
+	readonly offset?: number;
 }
 
-/**
- * Endpoint configuration
- */
-export interface IEndpointConfig {
-	url: string;
-	action: string;
-	waitTime?: number;
-	description?: string;
+/** Resource-specific parameters read outside the collection. */
+export interface RequestExtras {
+	readonly meastype?: readonly number[];
+	readonly dataFields?: readonly string[];
 }
 
-/**
- * Token refresh result
- */
-export interface ITokenRefreshResult {
-	success: boolean;
-	error?: Error;
+export type Form = Readonly<Record<string, string>>;
+
+export interface RequestParams {
+	readonly endpoint: string;
+	readonly form: Form;
 }
 
-/**
- * Validation attempt result
- */
-export interface IValidationAttemptResult {
-	success: boolean;
-	endpoint: string;
-	error?: Error;
+/** Resolved value of the legacy request helper with `resolveWithFullResponse` and `simple: false`. */
+export interface FullResponse {
+	readonly statusCode: number;
+	readonly body: unknown;
 }
 
-/**
- * Retry context for tracking retry state
- */
-export interface IRetryContext {
-	retries: number;
-	maxRetries: number;
-	tokenRefreshed: boolean;
-	lastError?: Error;
+export type FailureReason = 'http' | 'token' | 'api';
+
+export interface WithingsFailure {
+	readonly ok: false;
+	readonly reason: FailureReason;
+	readonly status: number;
+	readonly message: string;
 }
 
-/**
- * Formatted API response for n8n
- */
-export interface IFormattedResponse extends IDataObject {
-	success: boolean;
-	resource: string;
-	operation: string;
-	error?: string;
-	status?: number;
-	errorCode?: string;
+export interface WithingsSuccess {
+	readonly ok: true;
+	readonly body: IDataObject;
+}
+
+export type WithingsResult = WithingsSuccess | WithingsFailure;
+
+export interface NodeErrorOptions {
+	readonly message: string;
+	readonly description: string;
+	readonly httpCode?: string;
 }

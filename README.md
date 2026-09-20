@@ -1,170 +1,136 @@
 # n8n-nodes-withings
 
-This is an n8n community node for integrating with the [Withings](https://www.withings.com/) API. It provides nodes to access health and fitness data from your Withings account.
+[![npm version](https://img.shields.io/npm/v/@fjacquet/n8n-nodes-withings)](https://www.npmjs.com/package/@fjacquet/n8n-nodes-withings)
+[![npm downloads](https://img.shields.io/npm/dm/@fjacquet/n8n-nodes-withings)](https://www.npmjs.com/package/@fjacquet/n8n-nodes-withings)
+[![CI](https://github.com/fjacquet/n8n-nodes-withings/actions/workflows/ci.yml/badge.svg)](https://github.com/fjacquet/n8n-nodes-withings/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/@fjacquet/n8n-nodes-withings)](./LICENSE.md)
+[![node](https://img.shields.io/node/v/@fjacquet/n8n-nodes-withings)](https://nodejs.org)
+[![n8n community node](https://img.shields.io/badge/n8n-community%20node-ff6d5a)](https://docs.n8n.io/integrations/community-nodes/)
 
-## Features
+An [n8n](https://n8n.io) community node for the [Withings Health API](https://developer.withings.com): body measurements, activity, workouts, sleep, devices and goals.
 
-- Complete integration with Withings API resources:
-  - Activity data (getactivity, getsummary, getworkouts)
-  - Measurements (getmeas, getactivity, getintradayactivity)
-  - Sleep data (get, getsummary)
-  - User information (getdevice, getgoals, get)
-- Customizable parameters for all API operations
-- Proper error handling and response formatting
-- Automatic token refresh
+Authentication is a native n8n OAuth2 credential. You click **Connect my account** once; n8n stores the tokens, refreshes them before they expire and keeps the rotated refresh token. No second package, no token-exchange node, no external cron.
 
-## Prerequisites
+## Requirements
 
-- [n8n](https://n8n.io/) (version 1.0.0 or later)
-- Withings developer account and API credentials
-- **[n8n-nodes-withings-oauth2-credential](https://github.com/schimmmi/n8n-nodes-withings-oauth2-credential)** package (required for OAuth2 authentication)
+- n8n **2.40 or later**. Older versions cannot refresh Withings tokens: Withings answers HTTP 200 even when a token is expired, and the hook this package uses to work around that shipped in n8n 2.40.
+- A [Withings developer account](https://developer.withings.com) with an application (Client ID and Client Secret).
 
 ## Installation
 
-**IMPORTANT:** This package requires the separate credential package to handle Withings' non-standard OAuth2 implementation.
+In n8n open **Settings → Community Nodes → Install** and enter:
 
-Install both packages:
+```
+@fjacquet/n8n-nodes-withings
+```
+
+Or, for a self-managed custom-nodes directory:
 
 ```bash
-# 1. Install the OAuth2 credential package first
-npm install n8n-nodes-withings-oauth2-credential
-
-# 2. Then install this node package
-npm install n8n-nodes-withings
+npm install @fjacquet/n8n-nodes-withings
 ```
 
-For Docker-based n8n installations:
+## Withings application setup
 
-```bash
-# Add both packages to your docker-compose.yml or Dockerfile
-npm install n8n-nodes-withings-oauth2-credential n8n-nodes-withings
-```
+1. Sign in at <https://developer.withings.com> and create an application (or open an existing one).
+2. Set the **Callback URL** to your n8n OAuth callback, exactly:
 
-Or use the [n8n-docker-custom](https://github.com/n8n-io/n8n-docker-custom) approach.
+   ```
+   https://<your-n8n-host>/rest/oauth2-credential/callback
+   ```
 
-## Configuration
+   n8n shows this URL in the credential form as **OAuth Redirect URL**.
+3. Copy the **Client ID** and **Client Secret**.
 
-1. Create a developer account at [Withings Developer](https://developer.withings.com/)
-2. Register a new application to get your Client ID and Client Secret
-3. Set the callback URL to: `https://your-n8n-domain.com/rest/oauth2-credential/callback`
-4. In n8n, create a new credential of type "Withings OAuth2 API" (provided by the credential package)
-5. Enter your Client ID and Client Secret
-6. Configure the scopes as needed (default: user.info,user.metrics,user.activity,user.sleepevents)
-7. Click "Connect my account" and complete the OAuth2 flow
+## Credential setup
 
-### Why Two Packages?
+1. In n8n create a credential of type **Withings OAuth2 API**.
+2. Paste the Client ID and Client Secret.
+3. Adjust the **Scope** if needed. It is a comma-separated list. Default:
 
-Withings uses a non-standard OAuth2 implementation that requires an additional `action=requesttoken` parameter in the token request body. N8n's standard OAuth2 doesn't support modifying the token request body, so we need a separate credential package that uses `genericOAuth2Api` with a custom `authenticate()` method to inject this parameter.
+   ```
+   user.info,user.metrics,user.activity,user.sleepevents
+   ```
 
-## Usage
+   `user.info` is required for the **User** resource.
+4. Click **Connect my account**, sign in to Withings and approve the request.
 
-Once installed and configured, you can use the Withings API node in your workflows:
+The credential **Test** button only checks the stored token. It cannot refresh a token that has already expired, so after a few idle hours the test may report a rejected token even though workflows still run fine. Run a workflow instead of trusting the test after idle time.
 
-1. Add a "Withings API" node to your workflow
-2. Select your Withings OAuth2 credential
-3. Choose the resource (Activity, Measure, Sleep, or User)
-4. Choose the operation (e.g., "Get" for sleep data)
-5. Configure any additional parameters (date ranges, data fields, etc.)
+## Node usage
 
-## Example Workflows
+Add the **Withings** node, pick the credential, then a resource and an operation.
 
-### Get Sleep Data
+| Resource | Operation | Withings endpoint | Date parameters |
+|---|---|---|---|
+| Activity | Get Activity, Get Summary, Get Workouts | `POST /v2/measure` | `startdateymd`, `enddateymd` (calendar day, `YYYY-MM-DD`) |
+| Measure | Get Measurements | `POST /measure` | `startdate`, `enddate` (Unix seconds) |
+| Measure | Get Activity | `POST /v2/measure` | `startdateymd`, `enddateymd` (calendar day) |
+| Measure | Get Intraday Activity | `POST /v2/measure` | `startdate`, `enddate` (Unix seconds) |
+| Sleep | Get | `POST /v2/sleep` | `startdate`, `enddate` (Unix seconds) |
+| Sleep | Get Summary | `POST /v2/sleep` | `startdateymd`, `enddateymd` (calendar day) |
+| User | Get, Get Device, Get Goals | `POST /v2/user` | none |
 
-```
-Manual Trigger → Withings API (Sleep / Get) → Process Data
-```
+Calendar-day values keep the day you picked in the date picker, whatever timezone offset the value carries.
 
-Configure the node:
-- Resource: Sleep
-- Operation: Get
-- Additional Fields:
-  - Start Date: 2025-01-01
-  - End Date: 2025-01-31
-  - Data Fields: hr, rr, snoring
+Additional fields:
 
-### Get Daily Activity Summary
+- **Start Date** and **End Date** are converted per resource as shown above.
+- **Last Update** is always sent as Unix seconds (`lastupdate`).
+- **Offset** is sent when non-zero.
+- **Measure Type** (Measure → Get Measurements) filters by Withings measurement type codes.
+- **Data Fields** (Sleep → Get) selects the heart-rate, respiration-rate and snoring series.
 
-```
-Schedule Trigger → Withings API (Activity / Get Summary) → Store in Database
-```
+Each output item is the Withings response `body` spread as-is, for example `measuregrps` for measurements or `series` for sleep data.
 
-## API Resources
+The node can be used as a tool by AI Agent nodes.
 
-### Activity
-- **Get Activity**: Retrieve user activity data
-- **Get Summary**: Get activity summary
-- **Get Workouts**: Fetch workout data
+## How token refresh works
 
-### Measure
-- **Get Measurements**: Get measurement data (weight, height, blood pressure, etc.)
-- **Get Activity**: Get user intraday activity
-- **Get Intradayactivity**: Get detailed intraday activity
+Withings access tokens live three hours and every refresh rotates the refresh token. Before each request the node checks the expiry n8n stored for the token; once it is within a minute of expiring (or unknown), the node tells n8n to refresh first. n8n serialises refreshes across workers so the rotated refresh token is never lost. A refresh that Withings rejects is surfaced as an error instead of being stored. The first run after connecting always refreshes once (n8n has no expiry for the freshly connected token yet); after that, roughly once every three hours of use.
 
-### Sleep
-- **Get**: Get sleep data (with optional HR, RR, snoring data)
-- **Get Summary**: Get sleep summary
+Because Withings reports errors in the JSON body rather than in the HTTP status, the node uses n8n's legacy request helper, which is the only one able to evaluate a `200` response for refresh purposes. This is deliberate and documented in the source.
 
-### User
-- **Get Device**: Get user devices
-- **Get Goals**: Get user goals
-- **Get**: Get user information
+## Error handling
 
-## Troubleshooting
+Withings errors surface as n8n API errors with the Withings status code and message. Use the node settings **Retry On Fail** for transient failures and **Continue On Fail** to receive `{ "error": "<message>" }` items instead of stopping the workflow.
 
-### "Unable to sign without access token" Error
+| Symptom | Cause | Fix |
+|---|---|---|
+| `Withings rejected the access token. Reconnect the credential.` | The user revoked access, or a refresh failed | Open the credential and click **Reconnect** |
+| `Withings error 503: Invalid Params: invalid client id/secret` | Wrong Client ID or Secret, or the Withings app's callback URL differs from n8n's | Check the Withings application settings |
+| `Withings error 601: Too Many Requests` | Withings rate limit | Enable **Retry On Fail** with a wait |
+| Credential test fails after idle time | The test cannot refresh tokens | Run a workflow; see [Credential setup](#credential-setup) |
 
-This usually means the OAuth2 flow didn't complete successfully. Try:
-1. Make sure you installed **both** packages (credential + node)
-2. Delete and recreate your Withings OAuth2 credential
-3. Click "Connect my account" again
-4. Check the n8n logs for detailed error messages
+## Migrating from 1.x
 
-### Token Expired
+Version 2 is a breaking change.
 
-Tokens automatically refresh. If you see token errors:
-1. Reconnect your account in the credentials settings
-2. Check that your Withings app credentials are still valid
+1. Delete the old **Withings OAuth2 API** credential and create a new one as described above. The old `accessToken`, `refreshToken` and `expiresAt` fields no longer exist.
+2. Remove any **Withings Token Exchange** nodes from your workflows. The node type no longer exists.
+3. The node parameters `authenticationMethod` and `manualAccessToken` were removed. Existing nodes fall back to the credential automatically.
+4. Output items now contain only the Withings `body`. The `success`, `resource` and `operation` wrapper fields are gone; error items under **Continue On Fail** are `{ "error": "<message>" }`.
+5. The built-in retry loop was removed in favour of n8n's **Retry On Fail** node setting.
 
 ## Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/schimmmi/n8n-nodes-withings.git
-
-# Install dependencies
 npm install
-
-# Build
-npm run build
-
-# Watch mode for development
-npm run dev
+npm test            # vitest
+npm run lint        # biome + n8n-node lint
+npm run typecheck   # tsc, sources and tests
+npm run build       # n8n-node build → dist/
+npm run dev         # local n8n with this node loaded (needs Docker or Podman)
 ```
 
-## Version History
-
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
-
-### Latest: v1.0.0
-- **BREAKING CHANGE**: Removed built-in OAuth2 credentials
-- Now requires separate `n8n-nodes-withings-oauth2-credential` package
-- Cleaner separation of concerns between node logic and OAuth2 authentication
-- Simplified maintenance and updates
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Formatting and general linting are handled by [Biome](https://biomejs.dev); n8n-specific rules by `n8n-node lint` from [`@n8n/node-cli`](https://www.npmjs.com/package/@n8n/node-cli). Releases go through `npm run release`.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](./LICENSE.md)
 
 ## Links
 
-- [Withings Developer Documentation](https://developer.withings.com/)
-- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/)
-- [OAuth2 Credential Package](https://github.com/schimmmi/n8n-nodes-withings-oauth2-credential)
-
-## Support
-
-For issues, questions, or feature requests, please open an issue on GitHub.
+- [Withings API reference](https://developer.withings.com/api-reference/)
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/)
+- [Issues](https://github.com/fjacquet/n8n-nodes-withings/issues)
