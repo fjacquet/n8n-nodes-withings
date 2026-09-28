@@ -1,6 +1,6 @@
 {
   "name": "@fjacquet/n8n-nodes-withings",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "n8n community node for the Withings Health API with native n8n OAuth2 (automatic token refresh)",
   "keywords": [
     "n8n-community-node-package",

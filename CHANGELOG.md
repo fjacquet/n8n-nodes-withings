@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1
+
+### Changed
+
+- No change to the published node. Development dependencies bumped (`@n8n/node-cli` 0.49.1, `release-it` 21.1.0, `vitest` 5.0.2) to clear OSV security findings; the remaining dev-only findings pinned upstream by `@n8n/node-cli` are documented in `osv-scanner.toml` (#5).
+- The Security workflow now runs on `master` pushes and pull requests.
+
 ## 2.0.0
 
 ### Breaking changes
