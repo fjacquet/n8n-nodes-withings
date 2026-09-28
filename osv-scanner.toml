@@ -1,0 +1,27 @@
+# Dev-only transitive deps pulled in by @n8n/node-cli (via @n8n/ai-node-sdk), pinned exactly
+# upstream. They never ship in the published package (`files: ["dist"]`, no runtime deps), and
+# `n8n-node lint` forbids `overrides`. Exact versions + expiry: re-evaluated on every bump.
+
+[[PackageOverrides]]
+name = "qs"
+version = "6.15.2"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pinned by @n8n/backend-network (via @n8n/node-cli); not shipped"
+
+[[PackageOverrides]]
+name = "stream-json"
+version = "1.9.1"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pinned by @n8n/backend-common (via @n8n/node-cli); not shipped"
+
+[[PackageOverrides]]
+name = "uuid"
+version = "10.0.0"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, required ^10 by @langchain/classic and @langchain/community (via @n8n/node-cli); not shipped"
