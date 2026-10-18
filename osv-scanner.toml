@@ -42,13 +42,6 @@ vulnerability.ignore = true
 effectiveUntil = 2026-12-31
 reason = "Dev-only, pinned by @n8n/node-cli; not shipped"
 
-[[PackageOverrides]]
-name = "undici"
-version = "7.29.0"
-ecosystem = "npm"
-vulnerability.ignore = true
-effectiveUntil = 2026-12-31
-reason = "Dev-only, pinned by release-it; not shipped"
 
 [[PackageOverrides]]
 name = "basic-ftp"
