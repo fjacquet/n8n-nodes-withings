@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- No change to the published node. Development dependencies refreshed (`@n8n/node-cli` 0.52.5, `release-it` 21.1.1). The dev-only findings pinned upstream (`axios` via `n8n-workflow`, `handlebars` via `@n8n/node-cli`, `basic-ftp` via `release-it`, `braces` with no fix) are waived until 2026-12-31 in `osv-scanner.toml`.
+
 ## 2.0.1
 
 ### Changed
