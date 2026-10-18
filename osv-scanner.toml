@@ -25,3 +25,43 @@ ecosystem = "npm"
 vulnerability.ignore = true
 effectiveUntil = 2026-12-31
 reason = "Dev-only, required ^10 by @langchain/classic and @langchain/community (via @n8n/node-cli); not shipped"
+
+[[PackageOverrides]]
+name = "axios"
+version = "1.18.0"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pinned exactly by n8n-workflow; not shipped"
+
+[[PackageOverrides]]
+name = "handlebars"
+version = "4.7.9"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pinned by @n8n/node-cli; not shipped"
+
+[[PackageOverrides]]
+name = "undici"
+version = "7.29.0"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pinned by release-it; not shipped"
+
+[[PackageOverrides]]
+name = "basic-ftp"
+version = "5.3.1"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pulled by release-it via proxy-agent/get-uri; not shipped"
+
+[[PackageOverrides]]
+name = "braces"
+version = "3.0.3"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, no fixed version exists upstream; not shipped"
