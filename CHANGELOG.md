@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2.0.2
 
 ### Changed
 
 - No change to the published node. Development dependencies refreshed (`@n8n/node-cli` 0.52.5, `release-it` 21.1.1). The dev-only findings pinned upstream (`axios` via `n8n-workflow`, `handlebars` via `@n8n/node-cli`, `basic-ftp` via `release-it`, `braces` with no fix) are waived until 2026-12-31 in `osv-scanner.toml`.
+- Development dependencies bumped (`@n8n/node-cli` 0.53.4, `vitest` 5.0.5, `@biomejs/biome` 2.6.2, `typescript` 6.0.3). `moduleResolution` moves from `node` to `bundler`; the emitted JavaScript is unchanged. The dev-only `zod` and `undici` findings are waived in `osv-scanner.toml` (#10).
 
 ## 2.0.1
 
