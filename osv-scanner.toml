@@ -1,6 +1,7 @@
-# Dev-only transitive deps pulled in by @n8n/node-cli, n8n-workflow or release-it, pinned exactly
-# upstream. They never ship in the published package (`files: ["dist"]`, no runtime deps), and
-# `n8n-node lint` forbids `overrides`. Exact versions + expiry: re-evaluated on every bump.
+# Dev-only transitive deps pulled in by @n8n/node-cli, n8n-workflow or release-it, pinned upstream
+# (exactly, or by a range that excludes the fix). They never ship in the published package
+# (`files: ["dist"]`, no runtime deps), and `n8n-node lint` forbids `overrides`.
+# Exact versions + expiry: re-evaluated on every bump.
 
 [[PackageOverrides]]
 name = "qs"
@@ -42,7 +43,6 @@ vulnerability.ignore = true
 effectiveUntil = 2026-12-31
 reason = "Dev-only, pinned by @n8n/node-cli; not shipped"
 
-
 [[PackageOverrides]]
 name = "basic-ftp"
 version = "5.3.1"
@@ -52,20 +52,12 @@ effectiveUntil = 2026-12-31
 reason = "Dev-only, pulled by release-it via proxy-agent/get-uri; not shipped"
 
 [[PackageOverrides]]
-name = "braces"
-version = "3.0.3"
-ecosystem = "npm"
-vulnerability.ignore = true
-effectiveUntil = 2026-12-31
-reason = "Dev-only, no fixed version exists upstream; not shipped"
-
-[[PackageOverrides]]
 name = "zod"
 version = "3.25.76"
 ecosystem = "npm"
 vulnerability.ignore = true
 effectiveUntil = 2026-12-31
-reason = "Dev-only, required ^3 by langchain packages (via @n8n/node-cli); not shipped"
+reason = "Dev-only, pinned exactly by n8n-workflow and the @n8n/* packages (via @n8n/node-cli); not shipped"
 
 [[PackageOverrides]]
 name = "undici"

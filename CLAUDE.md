@@ -16,6 +16,12 @@ npm run release      # n8n-node release (release-it, needs npm login)
 
 Requires Node >= 24 (n8n 2.x requirement). Package targets n8n >= 2.40.
 
+Pinned dev versions, held back on purpose by `@n8n/node-cli`:
+
+- `typescript` exactly 6.0.x: node-cli's typescript-eslint only supports `<6.1.0`. TS 7 builds fine but `n8n-node lint` crashes.
+- `eslint` 9.x: eslint 10 removed `context.getFilename`, which eslint-plugin-n8n-nodes-base 1.x (required by node-cli) still calls.
+- `n8n-workflow` 2.40.x: typecheck against the oldest supported n8n. Its dev-only advisories are waived in `osv-scanner.toml`.
+
 ## Architecture
 
 `@fjacquet/n8n-nodes-withings` is an n8n community node package. One node, one credential, pure helpers.
