@@ -25,3 +25,35 @@ ecosystem = "npm"
 vulnerability.ignore = true
 effectiveUntil = 2026-12-31
 reason = "Dev-only, required ^10 by @langchain/classic and @langchain/community (via @n8n/node-cli); not shipped"
+
+[[PackageOverrides]]
+name = "handlebars"
+version = "4.7.9"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pinned exactly by @n8n/node-cli; not shipped"
+
+[[PackageOverrides]]
+name = "zod"
+version = "3.25.76"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, required ^3 by langchain packages (via @n8n/node-cli); not shipped"
+
+[[PackageOverrides]]
+name = "undici"
+version = "7.29.1"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pinned exactly by release-it; not shipped"
+
+[[PackageOverrides]]
+name = "basic-ftp"
+version = "5.3.1"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, ^5 via release-it > proxy-agent > get-uri; fix is 6.x; not shipped"
