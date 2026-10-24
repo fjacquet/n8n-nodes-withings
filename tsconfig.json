@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
-    "module": "commonjs",
-    "moduleResolution": "bundler",
+    "module": "node20",
     "target": "es2022",
     "lib": ["es2022"],
     "noImplicitReturns": true,
