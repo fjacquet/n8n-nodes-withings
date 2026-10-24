@@ -57,7 +57,7 @@ version = "3.25.76"
 ecosystem = "npm"
 vulnerability.ignore = true
 effectiveUntil = 2026-12-31
-reason = "Dev-only, pinned exactly by n8n-workflow and the @n8n/* packages (via @n8n/node-cli); not shipped"
+reason = "Dev-only, pinned exactly by the @n8n/* packages pulled in by @n8n/node-cli (n8n-workflow only declares it as a peer); not shipped"
 
 [[PackageOverrides]]
 name = "undici"

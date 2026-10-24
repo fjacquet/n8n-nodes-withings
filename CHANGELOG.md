@@ -4,13 +4,13 @@
 
 ### Changed
 
-- No change to the published node. TypeScript now compiles with `module: node20` instead of `commonjs` with `moduleResolution: bundler`, matching how n8n loads the package; the emitted JavaScript is unchanged. The stale `braces` waiver is removed from `osv-scanner.toml`.
+- No change to the published node. TypeScript now compiles with `module: node20` instead of `commonjs` with `moduleResolution: bundler`, matching how n8n loads the package; the emitted JavaScript is unchanged. The stale `braces` waiver is removed from `osv-scanner.toml` (its advisory is fixed in 3.0.3, the version in use).
 
 ## 2.0.2
 
 ### Changed
 
-- No change to the published node. Development dependencies bumped (`@n8n/node-cli` 0.53.4, `release-it` 21.1.1, `vitest` 5.0.5, `@biomejs/biome` 2.6.2, `typescript` 6.0.3) (#7, #10). The dev-only findings pinned upstream (`axios`, `zod` via `n8n-workflow`, `handlebars` via `@n8n/node-cli`, `basic-ftp`, `undici` via `release-it`) are waived until 2026-12-31 in `osv-scanner.toml`.
+- No change to the published node. Development dependencies bumped (`@n8n/node-cli` 0.53.4, `release-it` 21.1.1, `vitest` 5.0.5, `@biomejs/biome` 2.6.2, `typescript` 6.0.3) (#7, #10). The dev-only findings pinned upstream (`axios`, `zod` via `n8n-workflow`, `handlebars` via `@n8n/node-cli`, `basic-ftp`, `undici` via `release-it`, `braces`) are waived until 2026-12-31 in `osv-scanner.toml`. `moduleResolution` moved from the deprecated `node` to `bundler`.
 
 ## 2.0.1
 
