@@ -1,4 +1,4 @@
-# Dev-only transitive deps pulled in by @n8n/node-cli (via @n8n/ai-node-sdk), pinned exactly
+# Dev-only transitive deps pulled in by @n8n/node-cli or release-it, pinned exactly
 # upstream. They never ship in the published package (`files: ["dist"]`, no runtime deps), and
 # `n8n-node lint` forbids `overrides`. Exact versions + expiry: re-evaluated on every bump.
 
