@@ -1,4 +1,4 @@
-# Dev-only transitive deps pulled in by @n8n/node-cli (via @n8n/ai-node-sdk), pinned exactly
+# Dev-only transitive deps pulled in by @n8n/node-cli, n8n-workflow or release-it, pinned exactly
 # upstream. They never ship in the published package (`files: ["dist"]`, no runtime deps), and
 # `n8n-node lint` forbids `overrides`. Exact versions + expiry: re-evaluated on every bump.
 
@@ -58,3 +58,19 @@ ecosystem = "npm"
 vulnerability.ignore = true
 effectiveUntil = 2026-12-31
 reason = "Dev-only, no fixed version exists upstream; not shipped"
+
+[[PackageOverrides]]
+name = "zod"
+version = "3.25.76"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, required ^3 by langchain packages (via @n8n/node-cli); not shipped"
+
+[[PackageOverrides]]
+name = "undici"
+version = "7.29.1"
+ecosystem = "npm"
+vulnerability.ignore = true
+effectiveUntil = 2026-12-31
+reason = "Dev-only, pinned exactly by release-it; not shipped"
