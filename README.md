@@ -13,7 +13,7 @@ Authentication is a native n8n OAuth2 credential. You click **Connect my account
 
 ## Requirements
 
-- n8n **2.40 or later**. Older versions cannot refresh Withings tokens: Withings answers HTTP 200 even when a token is expired, and the hook this package uses to work around that shipped in n8n 2.40.
+- n8n **2.40 or later**, including 3.0 (see [n8n 3.0](#n8n-30) for the one setting to change). Older versions cannot refresh Withings tokens: Withings answers HTTP 200 even when a token is expired, and the hook this package uses to work around that shipped in n8n 2.40.
 - A [Withings developer account](https://developer.withings.com) with an application (Client ID and Client Secret).
 
 ## Installation
@@ -29,6 +29,22 @@ Or, for a self-managed custom-nodes directory:
 ```bash
 npm install @fjacquet/n8n-nodes-withings
 ```
+
+### n8n 3.0
+
+This package is not a verified community node. n8n 3.0 turns unverified community packages off by default: they can no longer be installed, and ones already installed stop loading after the upgrade. Turn them back on before upgrading (or right after) by setting one environment variable on the n8n container:
+
+```yaml
+# docker-compose.yml
+services:
+  n8n:
+    environment:
+      - N8N_UNVERIFIED_PACKAGES_ENABLED=true
+```
+
+or `docker run -e N8N_UNVERIFIED_PACKAGES_ENABLED=true …`, then restart n8n. Credentials and workflows are untouched; nothing else needs to change.
+
+The package itself needs no update for 3.0. It was checked against the 3.0 release candidate (`n8n-workflow` and `n8n-core` 3.0.1, `@n8n/node-cli` 1.0.1): it builds, lints and passes its tests, and the token-refresh path it relies on is unchanged. The same release works on 2.40+ and 3.0. See the [n8n 3.0 breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes) for the rest of the upgrade (n8n 3.0 runs in Docker only).
 
 ## Withings application setup
 

@@ -4,6 +4,7 @@
 
 ### Changed
 
+- README documents n8n 3.0: the node works unchanged (checked against the 3.0.1 release candidate), but n8n 3.0 disables unverified community packages by default, so `N8N_UNVERIFIED_PACKAGES_ENABLED=true` must be set on the n8n container.
 - No change to the published node. TypeScript now compiles with `module: node20` instead of `commonjs` with `moduleResolution: bundler`, matching how n8n loads the package; the emitted JavaScript is unchanged. The stale `braces` waiver is removed from `osv-scanner.toml` (its advisory is fixed in 3.0.3, the version in use).
 
 ## 2.0.2
