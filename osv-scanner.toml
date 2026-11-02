@@ -66,3 +66,35 @@ ecosystem = "npm"
 vulnerability.ignore = true
 effectiveUntil = 2026-12-31
 reason = "Dev-only, pinned exactly by release-it; not shipped"
+
+[[IgnoredVulns]]
+id = "GHSA-3g3m-2fjr-6pw4"
+ignoreUntil = 2027-01-30
+reason = """
+glob AbortSignal cancellation bypass (published 2026-10-30, fixed in 14.0.2).
+Dev-only: build tooling (workbox-build, rimraf, i18n-check) pins glob ^11/^13, and no
+released parent depends on glob >=14.0.2 yet, so there is no upgrade path. Not reachable: glob
+runs at build time over repo-owned patterns and never receives an attacker-controlled
+AbortSignal. Re-check at expiry; drop once the parents move to glob >=14.0.2.
+"""
+
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2027-01-30
+reason = """
+minimatch globparts amplification DoS (published 2026-10-30, fixed in 11.0.1 only; no
+backport exists for the 3.x/5.x/10.x lines still required by eslint, filelist, typescript-estree).
+Dev-only lint/build toolchain. Not reachable: patterns come from repo-owned config files, never
+from untrusted input, and the worst case is a hung local build. Re-check at expiry; drop once
+the toolchain parents accept minimatch >=11.0.1.
+"""
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-01-30
+reason = """
+deepmerge mergeObject() prototype poisoning (OSV last_affected 4.3.1, which is the newest
+release, so no patched version exists). Dev-only: root -> @rollup/plugin-node-resolve -> deepmerge ^4.2.2,
+used at build time on repo-owned rollup options. Not reachable: no untrusted object is ever merged.
+Re-check at expiry; drop when deepmerge ships a fix or the plugin stops depending on it.
+"""
